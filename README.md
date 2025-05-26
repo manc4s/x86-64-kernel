@@ -1,6 +1,7 @@
 # x86-64-kernel
 This is where my code is for the kernel and bootloader, + bash script to run and concatenate the binaries together quickly and run.<br>
-kernel will be developped in real mode because<br> 
+<br>
+This kernel will be developped in real mode because<br> 
 of the ascii interupts rather than using the<br> 
 scancode, but even if i do swap to the scan codes<br>
 then i will change the display resolutinon.<br>
