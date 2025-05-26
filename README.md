@@ -10,14 +10,14 @@ mode (0xA0000 - 0xAFFFF) video memory for 13 h mode where its one byte per pixel
 rather than messing with the planes, while messing with the gdt, while trying to figure out 32 bit<br>
 mode completely.<br>
 <br>
-Thus for now the project will resume in real mode.<br>
+**Thus for now the project will resume in real mode.**<br>
 <br>
-I developped my bootloader in another repository. <br>
+**I developped my bootloader in another repository.** <br>
 &nbsp;&nbsp;-4x6 custom glyphs<br>
 &nbsp;&nbsp;-13 hour mode<br>
 &nbsp;&nbsp;-2112 chars per page.<br>
 
-next steps:<br>
+**next steps:**<br>
 &nbsp;&nbsp;-shell<br>
 &nbsp;&nbsp;-input<br>
 &nbsp;&nbsp;-input buffer<br>
