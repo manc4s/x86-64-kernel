@@ -13,7 +13,6 @@ mode completely.<br>
 <br>
 **Thus for now the project will resume in real mode.**<br>
 <br>
-
 ---
 **I developped my bootloader in another repository.** <br>
 &nbsp;&nbsp;-4x6 custom glyphs<br>
