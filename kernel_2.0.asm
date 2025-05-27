@@ -38,90 +38,7 @@ start:
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;String Output;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;Output To the screen based on message at di.
-;output the message at memory location di, which is mapped to one of messages 1-4 after comp1 call.
-print_message_0x03mode:
-    mov dx, 0x8E00           ; attribute (color)
-    mov cx, [0x0600]         ; row
-    imul cx, 160             ; cx = row * 160
-
-
-    mov word [0x0602], 0
-
-    xor bx, bx               ; character index = 0
-
-.print_char:    
-    mov dl, [di + bx]        ; get next character
-    cmp dl, 0                ; null terminator?
-    je .done
-
-    mov si, bx
-    shl si, 1                ; si = bx * 2 (column * 2)
-    add si, cx               ; si = row*160 + col*2
-
-    mov word [es:si], dx     ; write char+attr at [es:si]
-    inc bx                   ; next character in string
-    inc word [0x0602]     ;inc column count
-
-    
-    ;call big_delay   if u want delay feature or not for bootloader
-    jmp .print_char
-    
-.done:
-    ret
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-
-
-
-
-
-
-main_0x03_mode_check:
-    call clear_0x03_mode
-    mov di, entered
-    call print_message_0x03mode
-    jmp .hang
-
-
-
-.hang:
-    jmp .hang
-
-
-
-clear_0x03_mode:
-    mov di, 0
-    mov cx, 2000          ; 80 x 25 = 2000 characters
-
-    mov ah, 0x07          ; attribute: light grey on black
-    mov al, 0x20          ; ASCII space
-    
-
-.clear_loop:
-    mov word [es:di], 0x8E20    ;attrobute 8E, yellow on dark gray, 0x20 space in ascii.
-    add di, 2
-    loop .clear_loop
-    ret
-
-
-
+;clears the screen with selected color in al
 loop_through_first_row:
     mov di, 0                ; Start at offset 0 (row 0)
     mov cx, 320*200              ; 320 pixels in the first row
@@ -173,6 +90,7 @@ print_char:
     ;both these counters need to be reset before every glyph anyways, universal locations are kept track of in [x_offset], [y_offset], divided by 4,for actual character location out of 0-79 cols and 0-32 rows, for a toal of 2640 chars
     mov bx, 0
     mov di, 0
+    
 
 .rest_of_print_char:
     ;mov si, alphabet + ((66-32)*6) ;backup working line
@@ -211,6 +129,74 @@ print_char:
 
 
 
+
+
+
+
+
+
+
+backspace:
+    push si
+    push bx
+    ;both these counters need to be reset before every glyph anyways, universal locations are kept track of in [x_offset], [y_offset], divided by 4,for actual character location out of 0-79 cols and 0-32 rows, for a toal of 2640 chars
+    mov bx, 0
+    mov di, 0
+    
+
+    cmp word [x_offset], 5
+    jl .bline
+    sub word [x_offset], 5
+    
+    mov al, 0x7F   ;ascii 127 all ones custom delete/backspace
+    call set_ascii
+
+.rb:
+    ;mov si, alphabet + ((66-32)*6) ;backup working line
+    mov si, alphabet
+    add si, [0x09999]       ;this value just holds the ascii you want to enter * 6
+    sub si, 192
+
+
+    add si, bx     ;add offset for which row of glyph                             ; si points to 'A' glyph
+                                                ;6 rows 0-6 bx being 0-6 off the loop. to grab all 6 bytes where only the lower halves of the bytes are used for 4x6 glyphs
+
+  
+    call plot_4bits_row_background_color
+    
+  
+
+    inc bx          ;increment row of glyph
+    add di, 320     ;next row, 320 pixel offset for di
+    cmp bx, 6        ;loop 0-5
+    jl .rb
+
+ 
+
+    pop bx
+    pop si
+    ret
+
+.bline:
+    call back_line
+    pop bx
+    pop si
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 ;takes an input
 ;or sets al,
 ;then [0x09999] is set to al * 6 for later use when writing text with alphabet + 6x - 192
@@ -220,6 +206,7 @@ set_ascii_to_print:
     mov ax, 0                       ;the input value ascii goes in al
     int 0x16
 
+    mov byte [ascii_entered], al ;save ascii
     ;mov al, 97
 
     ;al contains input from 0x16 interupt
@@ -231,7 +218,7 @@ set_ascii_to_print:
     ret
 
 
-
+;takes value from al, move it into [0x099999] = al*6 for the formula when printing chars
 set_ascii:
 
     ;al contains input from 0x16 interupt
@@ -243,7 +230,8 @@ set_ascii:
     ret
     
 
-
+;Shows specs and some messages when entering the kernel. All handled one at a time.This is called in main.
+;Specifications message at the start of kernel, called in main label
 menu_specs_message:
     mov si, entered ;argument string
     call print_string
@@ -310,18 +298,28 @@ menu_specs_message:
     ret
 
 
+
+
+;THE MAIN LOOP THE MAIN LOOP THE MAIN LOOP THE MAIN LOOP THE MAIN LOOP THE MAIN LOOP THE MAIN LOOP
+;===========================================================================================================
+;===========================================================================================================
+;===========================================================================================================
+;===========================================================================================================
+;===========================================================================================================
+
+
+;Main LOOP
+;
+;----------------------------------------------------------------------------
+;----------------------------------------------------------------------------
 main:
    
-   ; print 'A' at (0,0)
-   ;db 0b0110,0b1001,0b1111,0b1001,0b1001,0b0000
-
     call loop_through_first_row        ;sets the background one colour by looping through every pixel and turning every byte into a color.
 
     ;mov di, 0 ;is offset for VGA memory from es so you have to reset again after setting the background
 
     
 
-    ;;call set_ascii_to_print
 
     mov word [x_offset], 0              
     mov word [y_offset], 0
@@ -332,27 +330,74 @@ main:
     ;prints char that is entered in al
     ;;call print_char
 
-    call set_ascii_to_print
-    call print_char
-    
-    
+   
     call menu_specs_message
 
+    call new_line
+
+
+
+    
+.mainloop:
+    mov word [counter_0], 0   ;set input buffer to zero
+
+    mov si, enter_shell
+    call print_string
 
 
 
 
-;.the_main_loop:
-   ; add word [x_offset], 5
-   ; call print_char
-   ; inc word [counter_0]
-   ; cmp word [counter_0], 3
-  ;  jle .the_main_loop
+;counter zero is htere so that you cannot backspace the shell text and stuff.
+;it will start counting from the first input and print. 
+.taking_inputs:
+    call set_ascii_to_print
 
-   
+    cmp byte [ascii_entered], 0x08       ;backspace pressed
+    je .back_char
+
+
+    cmp byte [ascii_entered], 0x0D       ;enter pressed
+    je .enter_pressed
+
+    inc word [counter_0]
+    call print_char
+    jmp .taking_inputs
+
+
+.enter_pressed:
+    call new_line
+    jmp .mainloop
+
+.back_char:
+
+    cmp word [counter_0], 0
+    je .next
+    sub word [counter_0], 1   
+    call backspace
+
+.next:
+    jmp .taking_inputs
+
 
 .hang:
     jmp .hang
+
+
+
+
+
+
+
+
+;PRINTING RELATED LABELS
+;
+;
+;print_value_6_times
+;new_line
+;print_string
+;print_string_2, just another attempts at print_string while i was struggling
+;plot_4_its_row
+;----------------------------------------------------------------------------
 
 print_value_6_time:
     push bx
@@ -373,7 +418,33 @@ print_value_6_time:
 new_line:
     add word [y_offset], 6
     mov word [x_offset], 0
+    inc word [row]
+
+    cmp word [row], 33
+    jge .row_end
     ret
+
+
+.row_end:
+    call loop_through_first_row   ;clear screen to start from top again
+    mov word [row], 0     ;reset row counter
+    mov word [y_offset], 0
+    mov word [x_offset], 0
+    ret
+
+
+
+back_line:
+    cmp word [y_offset], 6
+    jb  .at_top        ; if y_offset < 6, already at first line
+    sub word [y_offset], 6
+    mov word [x_offset], 320    ; go to last char column
+    ret
+.at_top:
+    mov word [y_offset], 0
+    mov word [x_offset], 0
+    ret
+
 
 
 print_string:
@@ -431,6 +502,62 @@ print_string_2:
     pop bx
     pop ax
     ret
+
+
+
+
+
+
+
+;0x9F
+plot_4bits_row_background_color:
+    push bx
+    mov al, [si]         ; AL = row byte, lower 4 bits are the pixels
+    mov bx, 0            ; pixel index (0 to 3)
+
+    
+
+.loop:
+    mov ah, al
+    mov cl, 3
+    sub cl, bl           ; cl = (3-bl): bit index for current pixel (left to right)
+    shr ah, cl           ; move the target bit into the LSB
+    and ah, 1
+    jz .skip
+    
+    ;push bx
+    ;add bx, [x_offset]
+    ;push es
+    ;add es, [x_offset]
+    push bx
+    push ax
+
+    mov ax, [y_offset]
+    imul ax, 320
+    add bx, ax
+    add bx, [x_offset]
+
+    mov byte [es:di+bx], 0x9F    ; plot pixel (red) if bit is set
+                        ;red 0x04
+                        ;white 0x0F
+    pop ax
+    pop bx
+
+    ;pop es
+  
+.skip:
+    inc bx
+    cmp bx, 4
+    jl .loop
+    pop bx
+
+    ret
+
+
+
+
+
+
 
 
 ; IN:
@@ -499,6 +626,12 @@ check_alpha: db "alphabet font 4x6 glyphs:",0
 alpha: db "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz.|~", 0
 check_nums: db "nums font 4x6 glyphs:",0
 nums: db "0123456789 10",0
+enter_shell: db "kernel-shell-v1-$", 0
+
+
+
+
+;row counter , 0-33? not the same as t_offset which goes by 6 for 200/6 = 33.3
 row: dw 0
 
 other: db ';',0
@@ -506,6 +639,8 @@ x_offset: dw 0
 y_offset: dw 0
 
 counter_0: dw 0
+
+ascii_entered: dw 0
 
 ;for 13h mode, custom 4x6 font
 
@@ -650,17 +785,17 @@ alphabet:
     ; 100: d
     db 0b0001,0b0111,0b1001,0b1001,0b0111,0b0000
     ; 101: e
-    db 0b0110,0b1001,0b1111,0b1000,0b0110,0b0000
+    db 0b0000,0b0111,0b1111,0b1000,0b0111,0b0000
     ; 102: f
     db 0b0011,0b0100,0b1110,0b0100,0b0100,0b0000
     ; 103: g
-    db 0b0111,0b1001,0b0111,0b0001,0b0110,0b0000
+    db 0b0000,0b0110,0b1010,0b0110,0b0010,0b0110
     ; 104: h
     db 0b1000,0b1110,0b1001,0b1001,0b1001,0b0000
     ; 105: i
     db 0b0010,0b0000,0b0110,0b0010,0b0111,0b0000
     ; 106: j
-    db 0b0001,0b0000,0b0001,0b0001,0b0110,0b0000
+    db 0b0000,0b0001,0b0000,0b0001,0b0001,0b0110
     ; 107: k
     db 0b1000,0b1010,0b1100,0b1010,0b1001,0b0000
     ; 108: l
@@ -702,4 +837,4 @@ alphabet:
     ; 126: ~
     db 0b0000,0b0101,0b1010,0b0000,0b0000,0b0000
     ; 127: (DEL, blank)
-    db 0b0000,0b0000,0b0000,0b0000,0b0000,0b0000
+    db 0b1111,0b1111,0b1111,0b1111,0b1111,0b1111

@@ -7,6 +7,7 @@ REM --- Combine bootloader and kernel ---
 copy /b boot.bin + kernel.bin final_version.bin
 
 REM --- Run with QEMU ---
-qemu-system-i386 -fda final_version.bin
+REM qemu-system-i386 -fda final_version.bin
+qemu-system-i386 -fda final_version.bin -display gtk,zoom-to-fit=on 
 
 pause
