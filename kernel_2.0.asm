@@ -337,7 +337,7 @@ main:
 
 
 
-    
+;resetst the input buffer counter, prints shell output.
 .mainloop:
     mov word [counter_0], 0   ;set input buffer to zero
 
@@ -377,7 +377,10 @@ main:
     jmp .taking_inputs
 
 
+
+;enter pressed interatctions label
 .enter_pressed:
+
     cmp word [counter_0], 0
     je .buffer_zero_enter_pressed_instantly
     jg .other
@@ -385,6 +388,8 @@ main:
 .buffer_zero_enter_pressed_instantly:
     mov byte [input_buffer], 0
     call new_line
+
+    ;new kernel line
     jmp .mainloop
 
 
@@ -395,15 +400,35 @@ main:
     call print_string
     call new_line
 
+    ;new kernel line
     jmp .mainloop
 
+
+
+
+;back space interactions label
 .back_char:
 
+    ;size of input buffer is none, jump. to the top of taking inputs again
     cmp word [counter_0], 0
     je .next
-    sub word [counter_0], 1   
+
+
+    ;sub buffer size by 1
+    sub word [counter_0], 1
+
+    ;backspace needs to delete from the buffer, so the buffer most recent location will be turned to 0, the end   
+    push bx
+    mov bx, [counter_0]
+    mov byte [input_buffer + bx], 0
+    pop bx
+    ;------------------------------------------------------------------------------------------
+
+    ;call backspace for visually drawing
     call backspace
 
+
+;jump to taking inputs again
 .next:
     jmp .taking_inputs
 
