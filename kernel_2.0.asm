@@ -352,6 +352,7 @@ main:
 .taking_inputs:
     call set_ascii_to_print
 
+
     cmp byte [ascii_entered], 0x08       ;backspace pressed
     je .back_char
 
@@ -359,13 +360,41 @@ main:
     cmp byte [ascii_entered], 0x0D       ;enter pressed
     je .enter_pressed
 
+
+    push ax
+    mov al, [ascii_entered] 
+    
+
+    push bx
+    mov bx, [counter_0]
+    mov byte [input_buffer + bx], al
+    mov byte [input_buffer + bx + 1], 0  ;always zero terminated.
+    pop bx
+    pop ax
+
     inc word [counter_0]
     call print_char
     jmp .taking_inputs
 
 
 .enter_pressed:
+    cmp word [counter_0], 0
+    je .buffer_zero_enter_pressed_instantly
+    jg .other
+
+.buffer_zero_enter_pressed_instantly:
+    mov byte [input_buffer], 0
     call new_line
+    jmp .mainloop
+
+
+.other:
+
+    call new_line
+    mov si, input_buffer    
+    call print_string
+    call new_line
+
     jmp .mainloop
 
 .back_char:
@@ -639,8 +668,16 @@ x_offset: dw 0
 y_offset: dw 0
 
 counter_0: dw 0
+;make space of 128 bytes
+input_buffer: times 128 db 0
+
+
+
 
 ascii_entered: dw 0
+
+
+
 
 ;for 13h mode, custom 4x6 font
 
