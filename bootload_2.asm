@@ -202,53 +202,108 @@ inc_cursor:
 
 
 
+
+
+
+two_input:
+    push ax
+    ; Wait for 'y' or 'n' (case insensitive)
+.wait_for_yn:
+    mov ah, 0 
+    int 0x16
+    cmp al, 0x79 ;0x79
+    je .store_yn
+    cmp al, 'Y'
+    je .store_yn
+    cmp al, 'n'
+    je .store_yn
+    cmp al, 'N'
+    je .store_yn
+    jmp .wait_for_yn
+
+.store_yn:
+    mov byte [0x0900], al   ; save 'y' or 'n'
+    mov ah, 0x0e
+    int 0x10                ; print chosen char
+
+    ; DRAIN ALL OLD KEYSTROKES
+.flush:
+    mov ah, 1
+    int 0x16
+    jz .wait_enter
+    mov ah, 0
+    int 0x16
+    jmp .flush
+
+.wait_enter:
+    mov ah, 0
+    int 0x16
+    cmp al, 0x0D            ; Enter?
+    jne .wait_enter
+    mov byte [0x0901], al
+    pop ax
+    ret
+
+
+
+
 ;Takes two inputs, the first is a y or n, the second is an enter. 
 ;No other inputs will be accepted.
-two_input:
+;two_input:
     ;   Enter: 0x0D (Carriage Return, CR)
     ;   y': 0x79
     ;   'n': 0x6E
-    push ax
+   ; push ax
     
-    mov ah, 0 
-    int 0x16
+   ; mov ah, 0 
+   ; int 0x16
 
-    mov byte [0x0900], al  ;move first input into 0x0900
+    ;mov byte [0x0900], al  ;move first input into 0x0900
 
 
-    cmp byte [0x0900], 0x79 ;check if yes
-    je .next
+    ;cmp al, 0x79 ;check if yes
+    ;je .next
 
-    cmp byte [0x0900], 0x6E ;check if no
-    je .next
-    jmp two_input
+  ;  cmp al, 0x6E ;check if no
+   ; je .next
+ ;   jmp two_input
 
 
 ;print the character selected y or n
-.next:  
-    mov ah, 0x0e  ;print first char
-    int 0x10
+;.next:  
+   ; mov byte [0x0900], al
+  ;  mov ah, 0x0e  ;print first char
+ ;   int 0x10
+
+;.flush:
+    ;mov ah, 1
+    ;int 0x16
+    ;jz .second
+   ; mov ah, 0
+  ;  int 0x16
+ ;   jmp .flush
 
 
 ;takes the second input, must be an enter. Nothing else will be accepted.
-.second:
+;.second:
 
-    mov ah, 0 
-    int 0x16
+    ;mov ah, 0 
+    ;int 0x16
 
 
-    ;second char input
-    mov byte [0x0901], al   
+    ;second char input  
 
 
     ;check if second char input is an enter, enter ascii - 0x0D
-    cmp byte [0x0901], 0x0D 
-    jne .second
+   ; cmp al, 0x0D 
+  ;  jne .second
+
+ ;   mov byte [0x0901], al 
 
 
 
-    pop ax
-    ret
+;    pop ax
+;    ret
 
 
    
@@ -264,8 +319,13 @@ set_ax:
 
     cmp byte [0x0900], 0x79 ; yes ; print message 4, ax = 3
                                     ; no print message 3 ax = 2
-    
     je .booting
+
+
+    cmp byte [0x0900], 'Y'   ;cap Y as well 
+    je .booting
+
+
     jne .cancelling
 
 .booting:
@@ -312,6 +372,11 @@ boot_or_end:
                                     ; no print message 3 ax = 2
     
     je .booting
+
+    cmp byte [0x0900], 'Y'  ;cap Y as well
+    je .booting
+
+    
     jne .cancelling
 
 .booting:

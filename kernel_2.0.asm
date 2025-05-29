@@ -248,10 +248,27 @@ backspace:
     mov bx, 0
     mov di, 0
     
+  
+
+    ;cursor changes on backspace.
+    ;change old cursor color to background color 0x9F to get rid of it, print the cursor.
+    ;reset the counter
+    mov byte [cursor_color], 0x9F
+    call print_cursor
+    ;reset the cursor clock in memory to make sure that the backspaceing doesnt mess up witht he cursor logic
+    ;required on backspace for proper functionality
+    mov word [cursor_counter], 0  
+    
+        
+
 
     cmp word [x_offset], 5
     jl .bline
     sub word [x_offset], 5
+
+
+  
+
     
     mov al, 0x7F   ;ascii 127 all ones custom delete/backspace
     call set_ascii
@@ -498,6 +515,14 @@ main:
 ;enter pressed interatctions label
 .enter_pressed:
 
+    
+    mov byte [cursor_color], 0x9F
+    call print_cursor
+    ;reset the cursor clock in memory to make sure that the pressing enter doesnt mess up witht he cursor logic
+    ;required on backspace for proper functionality
+    mov word [cursor_counter], 0  
+
+
     cmp word [counter_0], 0
     je .buffer_zero_enter_pressed_instantly
     jg .other
@@ -587,6 +612,7 @@ print_value_6_time:
 
 
 new_line:
+
     add word [y_offset], 6
     mov word [x_offset], 0
     inc word [row]
@@ -663,6 +689,7 @@ plot_4bits_row_background_color:
     
 
 .loop:
+    inc word [cursor_counter]
     mov ah, al
     mov cl, 3
     sub cl, bl           ; cl = (3-bl): bit index for current pixel (left to right)
@@ -691,6 +718,7 @@ plot_4bits_row_background_color:
     ;pop es
   
 .skip:
+    inc word [cursor_counter]
     inc bx
     cmp bx, 4
     jl .loop
