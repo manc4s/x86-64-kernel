@@ -39,7 +39,7 @@ start:
 
 
 ;clears the screen with selected color in al
-loop_through_first_row:
+clear_screen:
     mov di, 0                ; Start at offset 0 (row 0)
     mov cx, 320*200              ; 320 pixels in the first row
     mov al, 0x9F    ;white bg         ; Color 00011100 (28),
@@ -76,6 +76,111 @@ loop_through_first_row:
     ret
 
 
+
+
+print_cursor:
+    ;preserve thse regs
+    push si
+    push cx
+    push di
+    push bx
+
+    mov si, [y_offset]
+    imul si, 320
+    add si, [x_offset]
+
+
+    ;6 loops, 6 rows
+    mov cx,6
+
+.next_row_cursor:
+    inc word [cursor_counter]
+
+    mov di, si   ;start of row
+
+    mov bl, [cursor_color]  ;cursor color taken and put in bl
+    mov byte [es:di], bl   
+    mov byte [es:di+1], bl
+    mov byte [es:di+2], bl
+    mov byte [es:di+3], bl  ; 4 wide
+
+    add si, 320
+
+    loop .next_row_cursor
+
+
+    pop bx
+    pop di
+    pop cx
+    pop si
+    
+    ret
+    
+
+
+;change_cursor_color
+;0x046C timer for keeping track of time
+toggle_cursor_color:
+    push si
+    push dx
+    push ax
+    
+    
+    inc word [cursor_counter]
+    mov ax, [cursor_counter]
+    mov dx, 0
+    mov cx, 2  ;100ticks
+    div cx  ;ax/cx remainder in dx
+    je .change_to_bg_color
+
+
+
+
+
+    pop ax
+    pop dx
+    pop si
+    ret
+
+.change_to_bg_color:
+    
+    
+    cmp byte [cursor_color], 0xbb
+    je .bg
+    mov byte [cursor_color], 0xbb
+    jmp .end
+
+
+         ;0x9D almost pink
+            ;0x98 nice purple
+            ;0xb6 dark pink
+            ;0x3e nice pink
+            ;0x36 sky blue
+            ;0x0c nice light red
+            ;0x0e yellow
+            ;0xd5 olive green
+            ;0xdc turquoise good for white text
+            ;0xbb brown gold weird
+            ;good orangey redish brown 0x88 white or black text good
+            ;good lacoste monotone green for white text 0xda
+            ;0xd4 barf green good for white text
+            ;0xe3 good purple for a shell
+            ;0x28 strong red 
+            ;0x38 nice light purple
+            ;3F strong pink
+            ;35 nice blue
+            ;34 nice blue
+
+.bg:
+    mov byte [cursor_color], 0x9F
+
+
+.end:
+    pop ax
+    pop dx
+    pop si
+    
+    ret
 
 
 ;loops form 0-5. offset is alphabet ((ascii -32)*6)
@@ -314,7 +419,7 @@ menu_specs_message:
 ;----------------------------------------------------------------------------
 main:
    
-    call loop_through_first_row        ;sets the background one colour by looping through every pixel and turning every byte into a color.
+    call clear_screen        ;sets the background one colour by looping through every pixel and turning every byte into a color.
 
     ;mov di, 0 ;is offset for VGA memory from es so you have to reset again after setting the background
 
@@ -350,6 +455,18 @@ main:
 ;counter zero is htere so that you cannot backspace the shell text and stuff.
 ;it will start counting from the first input and print. 
 .taking_inputs:
+
+
+    call print_cursor
+    inc word [cursor_counter]
+    call toggle_cursor_color
+    
+
+
+    mov ah, 1
+    int 16h
+    jz .taking_inputs
+
     call set_ascii_to_print
 
 
@@ -480,7 +597,7 @@ new_line:
 
 
 .row_end:
-    call loop_through_first_row   ;clear screen to start from top again
+    call clear_screen   ;clear screen to start from top again
     mov word [row], 0     ;reset row counter
     mov word [y_offset], 0
     mov word [x_offset], 0
@@ -530,32 +647,6 @@ print_string:
 
     ret
 
-
-
-print_string_2:
-    ;string label in ax when calling print
-    ;same as print_string
-    ;si must contain a memory location of string
-
-    push ax
-    push bx
-    mov bx, 0
-
-.printloop:
-    mov al, [si+bx]
-    cmp al, 0
-    je .done
-
-    call set_ascii
-    call print_char
-
-    inc bx
-    jmp .printloop
-
-.done:
-    pop bx
-    pop ax
-    ret
 
 
 
@@ -635,7 +726,7 @@ plot_4bits_row:
     sub cl, bl           ; cl = (3-bl): bit index for current pixel (left to right)
     shr ah, cl           ; move the target bit into the LSB
     and ah, 1
-    jz .skip
+    jz .write_bg
     
     ;push bx
     ;add bx, [x_offset]
@@ -655,9 +746,27 @@ plot_4bits_row:
     pop ax
     pop bx
 
+    jmp .next
     ;pop es
-  
-.skip:
+
+
+.write_bg:
+    push bx
+    push ax
+
+    mov ax, [y_offset]
+    imul ax, 320
+    add bx, ax
+    add bx, [x_offset]
+
+    mov byte [es:di+bx], 0x9F    ; plot background
+    pop ax
+    pop bx
+
+
+.next:
+
+
     inc bx
     cmp bx, 4
     jl .loop
@@ -668,9 +777,19 @@ plot_4bits_row:
 
 
 
-;simple text for 0x03 mode if 0x13 mode is failing
-entered: db "Successfully entered Kernel.", 0
 
+
+
+
+
+;===========================================================================================
+;===========================================================================================
+;DATA==========================DATA=========================DATA============================
+;===========================================================================================
+;===========================================================================================
+
+;SIMPLE MESSAGES
+entered: db "Successfully entered Kernel.", 0
 specs: db "Specifications:",0
 line: db "=====================",0
 mode: db "Mode: Real Mode.", 0
@@ -688,24 +807,44 @@ enter_shell: db "kernel-shell-v1-$", 0
 ;row counter , 0-33? not the same as t_offset which goes by 6 for 200/6 = 33.3
 row: dw 0
 
-other: db ';',0
+
+
+
+;Where you are in the screen. y is always 0-200 multiples of 6, x is 320 multiples of 5
+;glyphs are 4x5, but spaces between chars so i increment by 5's
 x_offset: dw 0
 y_offset: dw 0
 
+
+
+
+;input related
+;---------------------------------------------
+;Ascii value entered on every inpit
+ascii_entered: dw 0
+
+;input buffer counter
 counter_0: dw 0
+
 ;make space of 128 bytes
 input_buffer: times 128 db 0
 
 
 
+;cursor related
+;---------------------------------------------
+cursor_color: db 0xd4
+    ;0x9F background
+    ;black 0x00
+;track last clock tick for the 0x046C built in timer
+last_tick: dw 0
+cursor_counter: dw 0
 
-ascii_entered: dw 0
 
 
 
-
+;all chars 0-128, 4x6. 
 ;for 13h mode, custom 4x6 font
-
 alphabet:  
 
     ;32: Space
