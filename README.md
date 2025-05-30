@@ -24,9 +24,5 @@ mode completely.<br>
 &nbsp;&nbsp;-2112 chars per page.<br>
 
 **next steps:**<br>
-&nbsp;&nbsp;-shell<br>
-&nbsp;&nbsp;-input<br>
-&nbsp;&nbsp;-input buffer<br>
-&nbsp;&nbsp;-parser<br>
-&nbsp;&nbsp;-some kind of commands<br>
+&nbsp;&nbsp;-refactoring required to make sure the cursor, input and texts can work cohesively<br>
     
