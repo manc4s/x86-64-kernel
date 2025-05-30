@@ -84,17 +84,29 @@ print_cursor:
     push cx
     push di
     push bx
+    push ax
+
 
     mov si, [y_offset]
     imul si, 320
     add si, [x_offset]
 
 
+   
+    mov ax, [left_rightcount]
+    mov bx, ax
+    cmp ax, 0 ;if not equal then draw tghe character that currently cursor is on
+    jne .hovering_char
+
     ;6 loops, 6 rows
     mov cx,6
 
+
+
 .next_row_cursor:
+    ;increment cursor count for blinking every loops so it doenst stall
     inc word [cursor_counter]
+
 
     mov di, si   ;start of row
 
@@ -113,9 +125,28 @@ print_cursor:
     pop di
     pop cx
     pop si
-    
+    pop ax
     ret
+
+.hovering_char:
+    ;cursor counter
+    inc word [cursor_counter]
+
+    mov cx, [counter_0]  ;input buffer length, to start count from left end not right end
+    sub cx, bx
+    mov bx, cx
+    mov al, [input_buffer+bx]
+    call set_ascii
+    call print_char_cursor
+
+
     
+    pop bx
+    pop di
+    pop cx
+    pop si
+    pop ax
+    ret
 
 
 ;change_cursor_color
@@ -236,6 +267,51 @@ print_char:
 
 
 
+print_char_cursor:
+    push si
+    push bx
+    ;both these counters need to be reset before every glyph anyways, universal locations are kept track of in [x_offset], [y_offset], divided by 4,for actual character location out of 0-79 cols and 0-32 rows, for a toal of 2640 chars
+    mov bx, 0
+    mov di, 0
+    
+
+.rest_of_print_char:
+    ;mov si, alphabet + ((66-32)*6) ;backup working line
+    mov si, alphabet
+    add si, [0x09999]       ;this value just holds the ascii you want to enter * 6
+    sub si, 192
+
+
+    add si, bx     ;add offset for which row of glyph                             ; si points to 'A' glyph
+                                                ;6 rows 0-6 bx being 0-6 off the loop. to grab all 6 bytes where only the lower halves of the bytes are used for 4x6 glyphs
+
+  
+    call plot_4bits_row_red
+    
+  
+
+    inc bx          ;increment row of glyph
+    add di, 320     ;next row, 320 pixel offset for di
+    cmp bx, 6        ;loop 0-5
+    jl .rest_of_print_char
+
+    
+    cmp word [x_offset], 320    ;are you at the edge of the x
+    jge .reset_line
+
+
+    pop bx
+    pop si
+    ret
+
+.reset_line:
+    call new_line
+    pop bx
+    pop si
+    ret
+
+
+
 
 
 
@@ -325,11 +401,15 @@ backspace:
 set_ascii_to_print:
 
 
-    mov ax, 0                       ;the input value ascii goes in al
+    mov ax, 0x10                      ;the input value ascii goes in al
     int 0x16
 
     mov byte [ascii_entered], al ;save ascii
     ;mov al, 97
+    mov byte [scan_code_entered], ah
+
+
+
 
     ;al contains input from 0x16 interupt
     mov ah, 0
@@ -461,6 +541,7 @@ main:
 
 ;resetst the input buffer counter, prints shell output.
 .mainloop:
+   
     mov word [counter_0], 0   ;set input buffer to zero
 
     mov si, enter_shell
@@ -481,10 +562,26 @@ main:
 
 
     mov ah, 1
-    int 16h
+    int 0x16
     jz .taking_inputs
 
     call set_ascii_to_print
+
+
+    cmp byte [scan_code_entered], 0x4D  ;right arrow pressed
+    je .rightarrow
+
+
+    cmp byte [scan_code_entered], 0x4B  ;left arrow pressed
+    je .leftarrow
+
+
+    ;up and down arrows are not needed right now so if clicked just reset to take input
+    cmp byte [scan_code_entered], 0x48  ;down arrow pressed ;doesnt do anything right now just ignore this button it causes bugs
+    je .taking_inputs
+    cmp byte [scan_code_entered], 0x50  ;up arrow pressed
+    je .taking_inputs               ;ignore this button it makes bugs rn
+
 
 
     cmp byte [ascii_entered], 0x08       ;backspace pressed
@@ -493,6 +590,7 @@ main:
 
     cmp byte [ascii_entered], 0x0D       ;enter pressed
     je .enter_pressed
+
 
 
     push ax
@@ -512,6 +610,8 @@ main:
 
 
 
+
+
 ;enter pressed interatctions label
 .enter_pressed:
 
@@ -521,6 +621,11 @@ main:
     ;reset the cursor clock in memory to make sure that the pressing enter doesnt mess up witht he cursor logic
     ;required on backspace for proper functionality
     mov word [cursor_counter], 0  
+
+
+
+    ;reset left and right keystroke counter
+    mov word [left_rightcount], 0
 
 
     cmp word [counter_0], 0
@@ -568,6 +673,72 @@ main:
 
     ;call backspace for visually drawing
     call backspace
+    jmp .taking_inputs
+
+
+
+
+
+
+.leftarrow:
+
+    push ax
+    
+
+    mov byte [cursor_color], 0x9F
+    call print_cursor
+    ;reset the cursor clock in memory to make sure that the pressing enter doesnt mess up witht he cursor logic
+    ;required on backspace for proper functionality
+    mov word [cursor_counter], 0  
+
+
+    sub word [x_offset], 5
+
+    mov word ax, [counter_0]
+
+    cmp word [left_rightcount], ax
+    jl .leftlimit
+    jmp .skipleftpress
+    
+.leftlimit:
+    inc word [left_rightcount]
+    
+.skipleftpress:
+
+    pop ax
+    jmp .taking_inputs
+
+
+
+
+
+
+
+.rightarrow:
+    push ax
+
+    add word [x_offset], 5
+
+    mov word ax, [counter_0]
+
+    cmp word [left_rightcount], 0
+    jg .rightlimit
+    jmp .skipleftpress
+
+.rightlimit:
+    dec word [left_rightcount]
+    
+    
+.skiprightpress:
+
+    call toggle_cursor_color
+    call print_cursor
+    mov word [cursor_counter], 0  
+    pop ax
+    jmp .taking_inputs
+
+
+
 
 
 ;jump to taking inputs again
@@ -585,28 +756,29 @@ main:
 
 
 
+
+
+
+
+
+
+
+
+
 ;PRINTING RELATED LABELS
 ;
 ;
-;print_value_6_times
 ;new_line
 ;print_string
 ;print_string_2, just another attempts at print_string while i was struggling
 ;plot_4_its_row
 ;----------------------------------------------------------------------------
 
-print_value_6_time:
-    push bx
-    mov bx, 0
-   
-.loopzone:
-    call print_char
-    inc bx
-    cmp bx, 5
-    jle .loopzone
 
-    pop bx
-    ret
+
+
+
+
 
 
 
@@ -631,6 +803,15 @@ new_line:
 
 
 
+
+
+
+
+
+
+
+
+
 back_line:
     cmp word [y_offset], 6
     jb  .at_top        ; if y_offset < 6, already at first line
@@ -641,6 +822,17 @@ back_line:
     mov word [y_offset], 0
     mov word [x_offset], 0
     ret
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -749,6 +941,7 @@ plot_4bits_row:
     
 
 .loop:
+    inc word [cursor_counter]
     mov ah, al
     mov cl, 3
     sub cl, bl           ; cl = (3-bl): bit index for current pixel (left to right)
@@ -809,6 +1002,80 @@ plot_4bits_row:
 
 
 
+plot_4bits_row_red:
+    push bx
+    mov al, [si]         ; AL = row byte, lower 4 bits are the pixels
+    mov bx, 0            ; pixel index (0 to 3)
+
+    
+
+.loop:
+    inc word [cursor_counter]
+    mov ah, al
+    mov cl, 3
+    sub cl, bl           ; cl = (3-bl): bit index for current pixel (left to right)
+    shr ah, cl           ; move the target bit into the LSB
+    and ah, 1
+    jz .write_bg
+    
+    ;push bx
+    ;add bx, [x_offset]
+    ;push es
+    ;add es, [x_offset]
+    push bx
+    push ax
+
+    
+    
+    mov ax, [y_offset]
+    imul ax, 320
+    add bx, ax
+    add bx, [x_offset]
+
+
+
+    mov byte [es:di+bx], 0x04    ; plot pixel (red) if bit is set
+                        ;red 0x04
+                        ;white 0x0F
+    pop ax
+    pop bx
+
+    jmp .next
+
+
+.write_bg:
+    inc word [cursor_counter]
+    push bx
+    push ax
+
+    mov ax, [y_offset]
+    imul ax, 320
+    add bx, ax
+    add bx, [x_offset]
+
+
+
+    mov al, [cursor_color]
+    mov byte [es:di+bx], al    ; plot background
+    pop ax
+    pop bx
+
+
+
+
+.next:
+    inc word [cursor_counter]
+    inc bx
+    cmp bx, 4
+    jl .loop
+    pop bx
+
+    ret
+
+
+
+
+
 
 ;===========================================================================================
 ;===========================================================================================
@@ -849,7 +1116,10 @@ y_offset: dw 0
 ;input related
 ;---------------------------------------------
 ;Ascii value entered on every inpit
-ascii_entered: dw 0
+ascii_entered: db 0
+;scancode value entered on every input
+scan_code_entered: db 0
+
 
 ;input buffer counter
 counter_0: dw 0
@@ -867,6 +1137,7 @@ cursor_color: db 0xd4
 ;track last clock tick for the 0x046C built in timer
 last_tick: dw 0
 cursor_counter: dw 0
+left_rightcount: dw 0 
 
 
 

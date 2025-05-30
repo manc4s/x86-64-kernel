@@ -376,7 +376,7 @@ boot_or_end:
     cmp byte [0x0900], 'Y'  ;cap Y as well
     je .booting
 
-    
+
     jne .cancelling
 
 .booting:
@@ -440,7 +440,7 @@ main2:
     mov es, ax
     xor bx, bx
     mov ah, 0x02
-    mov al, 10
+    mov al, 20
     mov ch, 0
     mov cl, 2
     mov dh, 0
