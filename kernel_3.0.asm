@@ -18,7 +18,9 @@ start:
 
     ;draw the bg, so you can see the 320x200 screen in qemu, turns to selected bg_color
     call clear_screen
-    
+    ;clear the tracked page asciis
+    call clear_page_data
+
     ;entered kernel message
     mov si, entered
     call print_string
@@ -34,7 +36,7 @@ main:
  
     mov si, shell_line
     call print_string
-
+    mov word [input_size], 0
     
 .main_loop:
 
@@ -55,10 +57,31 @@ main:
    
     cmp byte ah, 0x1C  ; enter pressed
     je .enter_press
+    cmp byte ah, 0x4D   ;right arrow
+    je .rightarrow
+    cmp byte ah, 0x4B   ;left arrow
+    je .leftarrow
+    cmp byte al, 0x08   ;backspace
+    je .backspace
 
-    cmp byte al, 65
-    je .next
-    
+
+
+    ; limit reached?
+    cmp word [x_offset], 315
+    jne .continue
+    cmp word [row], 32
+    jne .continue
+    jmp .main_loop      ; at last char, don't allow more input
+
+.continue:
+    push bx
+    mov bx, [input_size]
+    mov byte [input_buffer + bx], al
+    mov byte [input_buffer + bx + 1], 0  ;always zero terminated.
+    pop bx
+   
+    inc word [input_size]
+
     ;else
     call print_char
     call next_char
@@ -69,65 +92,216 @@ main:
 .enter_press:
     call draw_blank
     call new_line
- 
+
+    mov word [cursor_left], 0 ; reset cursor left movement
+    call cursor_to_text
+
+
+
+    cmp word [input_size], 0
+    je main
+
+    push si
+    mov si, input_buffer
+    call print_string
+    call new_line
+    pop si
 
     jmp main
 
+.backspace:
 
 
-.next:
-
-    
-    mov word [x_offset], 10
-    mov word [y_offset], 120
-
-    call toggle_cursor_color_moved_pace
-    call draw_cursor
+    ;size of input buffer is none, jump. to the top of taking inputs again
+    cmp word [input_size], 0
+    je .main_loop
 
 
-    jmp .next
+    ;sub buffer size by 1
+    sub word [input_size], 1
+
+    ;backspace needs to delete from the buffer, so the buffer most recent location will be turned to 0, the end   
+    push bx
+    mov bx, [input_size]
+    mov byte [input_buffer + bx], 0
+    pop bx
+    ;------------------------------------------------------------------------------------------
+
+    ;call backspace for visually drawing
+    ;call backspace
+    call draw_blank
+    call decrement_position
+    call draw_blank
+    jmp .main_loop
+
+
+.rightarrow:
+    call move_cursor_right
+    jmp .main_loop
+
+
+.leftarrow:
+    call move_cursor_left
+    jmp .main_loop
 
 
 
 
 
 
-toggle_cursor_color_moved_pace:
-    push si
-    push dx
+
+
+
+
+cursor_to_text:
+
     push ax
+    push bx
 
-    inc word [cursor_counter]
-    cmp word [cursor_counter], 15000    ;the cursor blink rate 10000 ~= to 1 sec 
+    mov word ax, [x_offset]
+    mov word bx, [y_offset]
 
-    ;to avoid skipping, do when greater than 1000 than when equal.
-    jg .change_to_bg_color
-    jmp .end
+    mov word [cursor_offsetx], ax
+    mov word [cursor_offsety], bx
 
-.change_to_bg_color:    
-   
-    ;reset the counter
-    mov word [cursor_counter], 0
-    
-    ;cursor color 1
-    mov byte al, [black]
-    cmp byte [cursor_bg], al
-    je .to_black
-    mov byte [cursor_bg], al
-    jmp .end
-
-.to_black:
-    
-    ;cursor_color2
-    mov al, [yella]
-    mov byte [cursor_bg], al
-
-.end:
+    pop bx
     pop ax
-    pop dx
-    pop si
-    
     ret
+
+
+
+
+
+;move the cursor left counter and move
+move_cursor_left:
+
+    ;preserve
+    push ax
+    push bx
+    mov word ax, [input_size]
+    cmp word [cursor_left], ax
+    jl .continue
+
+    pop bx
+    pop ax
+    ret
+
+
+.continue:
+    
+    add word [cursor_left], 1  ;increment left movements
+    call erase_cursor  ;erase old position of cursor before editing the positions
+
+
+    cmp word [cursor_offsetx], 0
+    je .set320
+    sub word [cursor_offsetx], 5
+    pop bx
+    pop ax
+    ret
+
+
+
+.set320:
+
+    mov word [cursor_offsetx], 315  ;next character from leftarrowing from cursorx of zero
+    cmp word [cursor_offsety], 6
+    jge .substract
+
+    
+    pop bx
+    pop ax
+    ret
+
+.substract:
+    sub word [cursor_offsety], 6
+
+    pop bx
+    pop ax
+    ret
+
+
+
+
+
+;move the cursor right counter and move
+move_cursor_right:
+
+    ;preserve
+    push ax
+    push bx
+    cmp word [cursor_left], 0 ;at the newest position so cant keep moving right
+    jg .continue
+
+    pop bx
+    pop ax
+    ret
+
+
+.continue:
+    
+    sub word [cursor_left], 1  ;move right by subbing from left cursor counter
+    call erase_cursor  ;erase old position of cursor before editing the positions
+
+
+    cmp word [cursor_offsetx], 315
+    je .set0
+    add word [cursor_offsetx], 5
+    pop bx
+    pop ax
+    ret
+
+
+
+.set0:
+
+    mov word [cursor_offsetx], 0  ;next character from leftarrowing from cursorx of zero
+    cmp word [cursor_offsety], 192
+    jg .clear_page
+    add word [cursor_offsety], 6
+
+    pop bx
+    pop ax
+    ret
+
+.clear_page:
+    ;call clear_screen
+    ;call clear_page_data
+    
+    pop bx
+    pop ax
+    ret
+
+
+
+
+
+
+
+decrement_position:
+    
+    cmp word [x_offset], 0
+    je .set320
+
+    sub word [x_offset], 5
+    sub word [cursor_offsetx], 5
+    ret
+    
+
+.set320: 
+    mov word [x_offset], 315  ;next character from backspacing from x of zero
+    mov word [cursor_offsetx], 315
+
+    cmp word [y_offset], 6
+    jge .substract
+    ret
+
+.substract:
+    sub word [y_offset], 6
+    sub word [cursor_offsety], 6
+    ret
+
+
 
 
 
@@ -179,7 +353,7 @@ draw_blank:
     mov [bg_color], al
     mov al, [olive]
     mov [text_color], al
-    mov al, 32
+    mov al, 32  ;blank space
     call print_char
     
     mov al, [olive]
@@ -190,10 +364,89 @@ draw_blank:
     ret
 
 
+
+erase_cursor:
+
+
+    ;preserve ax
+    push ax
+    push bx
+    push cx
+
+    
+    mov word bx, [x_offset]
+    mov word cx, [y_offset]
+    push bx
+    push cx  ;save old cursor x and y to print cursor x and y positions
+
+    mov word bx, [cursor_offsetx]
+    mov word cx, [cursor_offsety]
+
+
+    ;x and y offset are set to cursor x and y offset before printing the cursor
+    mov word [x_offset], bx
+    mov word [y_offset], cx
+
+
+
+    mov al, [olive]
+    mov [bg_color], al
+    mov al, [white]
+    mov [text_color], al
+    
+    ;call scan_glyph_at_cursor
+    call hovering
+    mov al, [hovering_char] 
+    call print_char
+
+    
+    ;grab old x and y offsets
+    pop cx
+    pop bx
+
+    mov word [y_offset], cx
+    mov word [x_offset], bx
+
+    
+    mov al, [olive]
+    mov [bg_color], al
+    mov al, [white]
+    mov [text_color], al
+
+
+
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+
+
+
+
 draw_cursor:
 
     ;preserve ax
     push ax
+    push bx
+    push cx
+
+    
+    mov word bx, [x_offset]
+    mov word cx, [y_offset]
+    push bx
+    push cx  ;save old cursor x and y to print cursor x and y positions
+
+    mov word bx, [cursor_offsetx]
+    mov word cx, [cursor_offsety]
+
+
+    ;x and y offset are set to cursor x and y offset before printing the cursor
+    mov word [x_offset], bx
+    mov word [y_offset], cx
+
+
+
     mov al, [cursor_bg]
     mov [bg_color], al
     mov al, [cursor_text]
@@ -204,11 +457,27 @@ draw_cursor:
     mov al, [hovering_char]   
     ;mov al, [page_data + 1] ; change to [hovering_char] after hovering the page_data
     call print_char
+
+
+
+    ;grab old x and y offsets
+    pop cx
+    pop bx
+
+    mov word [y_offset], cx
+    mov word [x_offset], bx
+
+
+
     
     mov al, [olive]
     mov [bg_color], al
     mov al, [white]
     mov [text_color], al
+
+
+    pop cx
+    pop bx
     pop ax
     ret
 
@@ -267,15 +536,16 @@ hovering:
     mov bx, 5
     div bx
     mov si, ax
-    pop ax
+  
 
     ;y/6 * 64
-    push ax
+   
     mov ax, [y_offset]
     mov dx, 0
     mov bx, 6
     div bx
-    imul ax, 64
+
+    imul ax, 64    
     add si, ax
     pop ax
 
@@ -390,7 +660,11 @@ print_char:
 
 new_line:
     add word [y_offset], 6
+    add word [cursor_offsety], 6
+
     mov word [x_offset], 0
+    mov word [cursor_offsetx], 0
+
 
     ;33 rows startinf including 0
     cmp word [row], 32
@@ -402,9 +676,16 @@ new_line:
 .row_end:
 
     call clear_screen
+    call clear_page_data
+
+
     mov word [row], 0
     mov word [y_offset], 0
+    mov word [cursor_offsety], 0
+
+
     mov word [x_offset], 0
+    mov word [cursor_offsetx], 0
     ret
 
 
@@ -414,6 +695,8 @@ new_line:
 
 next_char:
     add word [x_offset], 5    ; should increment by 5
+    add word [cursor_offsetx], 5
+
     cmp word [x_offset], 320
     jge .next
     ret
@@ -520,15 +803,37 @@ clear_screen:
 
 
 
+
+
+
+
+clear_page_data:
+
+    push si
+    push ax
+    push cx
+
+    mov si, page_data     ; start of buffer
+    mov cx, 2112          ; number of bytes
+    xor al, al            ; value to write (0)
+
+.clear_loop:
+    mov [si], al
+    inc si
+    loop .clear_loop
+
+
+
+    pop cx
+    pop ax
+    pop si
+    ret
+
+
 end:
 
 .hang:
     jmp .hang 
-
-
-
-
-
 
 
 
