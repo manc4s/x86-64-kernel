@@ -65,6 +65,11 @@ main:
     je .backspace
 
 
+    ;teting the memory shift when capital A is pressed
+    cmp byte al, 65  ;A
+    je .shift_test
+
+
 
     ; limit reached?
     cmp word [x_offset], 315
@@ -74,6 +79,11 @@ main:
     jmp .main_loop      ; at last char, don't allow more input
 
 .continue:
+
+    cmp word [input_size], 999    ;max byte input allowed.
+    jge .main_loop
+
+
     push bx
     mov bx, [input_size]
     mov byte [input_buffer + bx], al
@@ -101,13 +111,25 @@ main:
     cmp word [input_size], 0
     je main
 
+    ;call new_line
     push si
     mov si, input_buffer
     call print_string
     call new_line
     pop si
 
+    ;call new_line
+
     jmp main
+
+
+.shift_test:
+
+    ;call shift_memory
+    ;call shift_whole_screen3
+    ;call shift_six_rows
+    call shift_whole_screen_4
+    jmp .main_loop
 
 .backspace:
 
@@ -119,6 +141,9 @@ main:
 
     ;sub buffer size by 1
     sub word [input_size], 1
+
+    
+
 
     ;backspace needs to delete from the buffer, so the buffer most recent location will be turned to 0, the end   
     push bx
@@ -143,6 +168,298 @@ main:
 .leftarrow:
     call move_cursor_left
     jmp .main_loop
+
+
+
+
+
+
+shift_whole_screen3:
+    push si
+    push ax
+    push cx
+    push bx
+    push dx
+
+    mov si, 63999         ; last pixel
+    mov cx, 63995         ; total to shift
+
+.shift_loop:
+    mov ax, si
+    xor dx, dx
+    mov bx, 320
+    div bx                ; AX / 320 → DX = X offset
+
+    cmp dx, 4
+    jg .normal_shift      ; use normal shift if x > 4
+
+    cmp si, 1605
+    jb .zero_pixel        ; not enough room above, blank it
+
+    ; Indent shift
+    mov al, [es:si - 1605]
+    mov [es:si], al
+    jmp .next
+
+.normal_shift:
+    mov al, [es:si - 5]
+    mov [es:si], al
+    jmp .next
+
+.zero_pixel:
+    mov byte [es:si], 0
+
+.next:
+    dec si
+    loop .shift_loop
+
+.end:
+    pop dx
+    pop bx
+    pop cx
+    pop ax
+    pop si
+    ret
+
+
+
+
+
+
+; Shift entire video memory as one continuous block
+shift_whole_screen2:
+    push si
+    push ax
+    push cx
+    
+    mov si, 63999       ; Start from last pixel (320*200-1)
+    mov cx, 63995       ; Shift 63995 pixels (64000-5)
+    
+.shift_loop:
+    mov al, [es:si-5]   ; Get pixel 5 positions back
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift_loop
+    
+    pop cx
+    pop ax
+    pop si
+    ret
+
+
+
+
+
+
+; Shift entire video memory (320x200)
+shift_whole_screen_4:
+    push si
+    push di
+    push ax
+    push cx
+    push dx
+    
+    call erase_cursor
+
+    mov dx, 200         ; Number of rows (entire screen height)
+    sub dx, [cursor_offsety]
+    
+
+    mov ax, [cursor_offsety]
+    imul ax, 320
+    add ax, 319
+    mov si, ax         ; Start from end of first row
+    
+
+
+.row_loop:
+    push si             ; Save current row start
+    mov cx, 315         ; Shift 315 pixels per row (320-5)
+    sub cx, [cursor_offsetx]
+    
+.shift_loop:
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift_loop
+    
+    pop si              ; Restore row start
+    add si, 320         ; Move to end of next row
+    dec dx
+    jnz .row_loop       ; Continue if more rows to process
+    
+
+
+
+    call draw_blank_at_cursor
+    pop dx
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+
+
+
+
+; Shift entire video memory (320x200)
+shift_whole_screen:
+    push si
+    push di
+    push ax
+    push cx
+    push dx
+    
+    mov dx, 200         ; Number of rows (entire screen height)
+    mov si, 319         ; Start from end of first row
+    
+.row_loop:
+    push si             ; Save current row start
+    mov cx, 315         ; Shift 315 pixels per row (320-5)
+    
+.shift_loop:
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift_loop
+    
+    pop si              ; Restore row start
+    add si, 320         ; Move to end of next row
+    dec dx
+    jnz .row_loop       ; Continue if more rows to process
+    
+    pop dx
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+
+
+
+
+; Shift 6 rows
+shift_six_rows:
+    push si
+    push di
+    push ax
+    push cx
+    push dx
+    
+    mov dx, 6           ; Number of rows to shift
+    mov si, 319         ; Start from end of first row
+    
+.row_loop:
+    push si             ; Save current row start
+    mov cx, 315         ; Shift 315 pixels per row (320-5)
+    
+.shift_loop:
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift_loop
+    
+    pop si              ; Restore row start
+    add si, 320         ; Move to end of next row
+    dec dx
+    jnz .row_loop       ; Continue if more rows to process
+    
+    pop dx
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+
+; Shift just one row to test
+shift_one_row:
+    push si
+    push di
+    push ax
+    push cx
+    
+    mov si, 319         ; Start from end of first row
+    mov cx, 315         ; Shift 315 pixels (320-5)
+    
+.shift_loop:
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift_loop
+    
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+shift_memory:
+
+
+    push si
+    push bx
+    push ax
+    push di
+    push cx
+
+    ; Test - fill first 100 pixels with white (color 15)
+    mov di, 0
+    mov cx, 100
+    mov al, 15
+.fill:
+    mov [es:di], al
+    inc di
+    loop .fill
+
+    
+    push si 
+    push bx
+    push ax
+    push di
+
+    mov ax, 6          ; y_offset
+    imul ax, 320
+    add ax, 0          ; x_offset
+    mov di, ax         ; start offset
+
+    mov si, 63999      ; last visible pixel in 320x200 (not 0xFFFF)
+
+.continue:
+    cmp si, 4
+    jl .done
+
+    cmp si, di
+    jl .done
+
+    mov bx, si
+    sub bx, 5
+    mov al, [es:bx]
+    mov [es:si], al
+
+    dec si
+    jmp .continue
+
+.done:
+    pop cx
+    pop di
+    pop ax
+    pop bx
+    pop si
+    ret
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -344,7 +661,7 @@ toggle_cursor_color:
 
 
 
-
+;draws blank at x and y offset
 draw_blank:
     
     ;preserve ax
@@ -362,6 +679,65 @@ draw_blank:
     mov [text_color], al
     pop ax
     ret
+
+
+
+
+;draw blank at x cursor y cursor
+draw_blank_at_cursor:
+
+     ;preserve registers
+    push ax
+    push bx
+    push cx
+
+
+    mov word bx, [x_offset]
+    mov word cx, [y_offset]
+    push bx
+    push cx  ;save old cursor x and y to print cursor x and y positions
+
+    mov word bx, [cursor_offsetx]
+    mov word cx, [cursor_offsety]
+
+
+    ;x and y offset are set to cursor x and y offset before printing the cursor
+    mov word [x_offset], bx
+    mov word [y_offset], cx
+
+
+    mov al, [olive]
+    mov [bg_color], al
+    mov al, [olive]
+    mov [text_color], al
+    
+    mov al, 32  ;blank space
+    call print_char
+    
+    ;grab old x and y offsets
+    pop cx
+    pop bx
+
+    mov word [y_offset], cx
+    mov word [x_offset], bx
+
+
+    mov al, [olive]
+    mov [bg_color], al
+    mov al, [white]
+    mov [text_color], al 
+
+
+    pop cx
+    pop bx
+    pop ax
+    ret
+
+
+
+
+
+
 
 
 
