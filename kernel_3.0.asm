@@ -258,22 +258,27 @@ shift_whole_screen_4:
     push ax
     push cx
     push dx
-    
+  
+
     call erase_cursor
 
     mov dx, 200         ; Number of rows (entire screen height)
     sub dx, [cursor_offsety]
+    sub dx, 6
     
 
     mov ax, [cursor_offsety]
     imul ax, 320
     add ax, 319
     mov si, ax         ; Start from end of first row
+
+    jmp .other_end
     
 
 
 .row_loop:
     push si             ; Save current row start
+
     mov cx, 315         ; Shift 315 pixels per row (320-5)
     sub cx, [cursor_offsetx]
     
@@ -292,12 +297,136 @@ shift_whole_screen_4:
 
 
     call draw_blank_at_cursor
+
+
+
     pop dx
     pop cx
     pop ax
     pop di
     pop si
     ret
+
+
+
+
+.other_end:
+    ;here i can implement the rest of the rows tabbing forward
+    push si
+    ;start at the otehr end looping rows backwards.
+    mov si, 63999
+ 
+.all_rows:
+    push si
+    mov cx, 315
+
+.shift:
+
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift
+
+
+    pop si              ; Restore row start
+    sub si, 320         ; Move to end of next row
+    dec dx
+    jnz .all_rows       ; Continue if more rows to process
+    
+
+    pop si
+    ;jmp .row_loop
+
+
+
+
+
+    add dx, 6  ; set the counter for the first row which is 6 rows
+    jmp .row_loop
+
+
+
+    pop dx
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+
+
+    
+
+
+
+
+;same as shift whole screen 4 but rather than shifting the line from which the cursor is, it shifts the line from the x and y input via
+;ax register input y
+;bx register input x
+;
+shift_whole_screen_5:
+    push si
+    push di
+    push ax
+    push cx
+    push dx
+    
+    mov dx, 200         ; Number of rows (entire screen height)
+    sub dx, ax
+   
+    imul ax, 320
+    add ax, 319
+    mov si, ax         ; Start from end of first row
+    
+
+
+.row_loop:
+    push si             ; Save current row start
+    mov cx, 315         ; Shift 315 pixels per row (320-5)
+    sub cx, bx
+    
+.shift_loop:
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+    loop .shift_loop
+    
+    pop si              ; Restore row start
+    add si, 320         ; Move to end of next row
+    dec dx
+    jnz .row_loop       ; Continue if more rows to process
+    
+    
+    pop dx
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
