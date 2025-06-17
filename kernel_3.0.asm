@@ -66,8 +66,8 @@ main:
 
 
     ;teting the memory shift when capital A is pressed
-    cmp byte al, 65  ;A
-    je .shift_test
+    ;cmp byte al, 65  ;A]
+    ;je .shift_test
 
 
 
@@ -79,6 +79,10 @@ main:
     jmp .main_loop      ; at last char, don't allow more input
 
 .continue:
+
+
+    cmp word [cursor_left], 0
+    jne .continue2
 
     cmp word [input_size], 999    ;max byte input allowed.
     jge .main_loop
@@ -99,8 +103,24 @@ main:
 
 
 
+
+.continue2:
+    cmp word [input_size], 999
+    jge .main_loop
+
+
+    call shifter
+
+    jmp .main_loop
+
+
+
+
+
 .enter_press:
     call draw_blank
+    call erase_cursor
+    ;call draw_blank_at_cursor
     call new_line
 
     mov word [cursor_left], 0 ; reset cursor left movement
@@ -124,11 +144,9 @@ main:
 
 
 .shift_test:
+  
+    call shifter
 
-    ;call shift_memory
-    ;call shift_whole_screen3
-    ;call shift_six_rows
-    call shift_whole_screen_4
     jmp .main_loop
 
 .backspace:
@@ -168,6 +186,49 @@ main:
 .leftarrow:
     call move_cursor_left
     jmp .main_loop
+
+
+
+
+
+
+
+shifter:
+
+    ;call erase_cursor
+    call shift_whole_screen2
+    call shift_whole_screen_4
+    call print_char_cursor
+    call next_cursor
+    ;call draw_blank_at_cursor
+    ;call next_char_nocursor
+    ;call print_char_cursor
+    ;call next_char
+
+    
+    ;push bx
+    ;mov bx, [input_size]
+    ;mov byte [input_buffer + bx], 'A'
+    ;mov byte [input_buffer + bx + 1], 0
+    ;pop bx
+
+    ;inc word [input_size]
+    ;inc word [cursor_left]
+
+
+    call shift_input_buffer
+
+    ;push bx
+    ;mov bx, [input_size]
+    ;sub bx, [cursor_left]
+    ;mov byte [input_buffer + bx], al
+    ;pop bx
+
+    ;inc word [input_size]
+  
+
+
+    ret
 
 
 
@@ -226,25 +287,118 @@ shift_whole_screen3:
 
 
 
+shift_input_buffer:
+    push si
+    push ax
+    push cx
+    push dx
+    push bx
+    push di
+
+    push ax
+
+    mov si, input_buffer_end
+    sub si, 1
+
+    ;si contains end of input buffer
+
+
+    ;in data file, max size of input buffer is 1000
+    mov cx, 1000
+
+    mov ax, [input_size]
+    sub ax, [cursor_left]
+   
+
+    sub cx, ax   ;stop at the input buffer at the inputbuffer size input - left_arrow for if cursor moved
+    sub cx, 1
+
+.shift_loop:
+
+    mov al, [si - 1]
+    mov [si], al
+    dec si
+
+    cmp cx, 1
+    jne .continue
+    
+    mov di, input_buffer
+    add di, [input_size]
+    sub di, [cursor_left]
+    ;add di, 1
+
+
+    pop ax
+    mov byte [di], al
+    inc word [input_size]
+    
+
+
+.continue: 
+    loop .shift_loop
+
+    pop di
+    pop bx
+    pop dx
+    pop cx
+    pop ax
+    pop si
+    ret
+
+
+
+
+
 ; Shift entire video memory as one continuous block
 shift_whole_screen2:
     push si
     push ax
     push cx
+    push dx
+    push bx
+
+
+    mov si, page_data_end       ; Start from last pixel (320*200-1)
+    sub si, 1
+
+
+
+
+    mov cx, 2304       ; Shift 63995 pixels (64000-5)
+
+    mov ax, [cursor_offsety]
+    mov dx, 0
+    mov bx, 6
+    div bx
+    imul ax, 64
+    sub cx, ax
+
+
+    mov ax, [cursor_offsetx]
+    mov dx, 0
+    mov bx, 5
+    div bx 
     
-    mov si, 63999       ; Start from last pixel (320*200-1)
-    mov cx, 63995       ; Shift 63995 pixels (64000-5)
+    sub cx, ax
+
     
+
+
 .shift_loop:
-    mov al, [es:si-5]   ; Get pixel 5 positions back
-    mov [es:si], al     ; Store it
+
+    
+    mov al, [si-1]   ; Get pixel 5 positions back
+    mov [si], al     ; Store it
     dec si
     loop .shift_loop
     
+    pop bx
+    pop dx
     pop cx
     pop ax
     pop si
     ret
+
 
 
 
@@ -281,11 +435,10 @@ shift_whole_screen_4:
 
     mov cx, 315         ; Shift 315 pixels per row (320-5)
     sub cx, [cursor_offsetx]
+ 
     
 .shift_loop:
-    mov al, [es:si-5]   ; Get pixel 5 positions to the left
-    mov [es:si], al     ; Store it
-    dec si
+    call shift5
     loop .shift_loop
     
     pop si              ; Restore row start
@@ -293,12 +446,6 @@ shift_whole_screen_4:
     dec dx
     jnz .row_loop       ; Continue if more rows to process
     
-
-
-
-    call draw_blank_at_cursor
-
-
 
     pop dx
     pop cx
@@ -311,6 +458,7 @@ shift_whole_screen_4:
 
 
 .other_end:
+
     ;here i can implement the rest of the rows tabbing forward
     push si
     ;start at the otehr end looping rows backwards.
@@ -318,13 +466,20 @@ shift_whole_screen_4:
  
 .all_rows:
     push si
-    mov cx, 315
+    mov cx, 320
 
 .shift:
-
-    mov al, [es:si-5]   ; Get pixel 5 positions to the left
-    mov [es:si], al     ; Store it
-    dec si
+    cmp cx, 5
+    jle .continue
+    
+    ;mov si - 5 to si
+    call shift5
+    
+    jmp .next
+.continue:
+    ;mov si - 1605 to si
+    call shift1605
+.next:    
     loop .shift
 
 
@@ -338,24 +493,31 @@ shift_whole_screen_4:
     ;jmp .row_loop
 
 
-
-
-
     add dx, 6  ; set the counter for the first row which is 6 rows
     jmp .row_loop
 
 
 
-    pop dx
-    pop cx
-    pop ax
-    pop di
-    pop si
-    ret
-
 
 
     
+shift5:
+
+    mov al, [es:si-5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+
+    ret
+
+
+shift1605:
+
+
+    mov al, [es:si-1605]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    dec si
+
+    ret
 
 
 
@@ -840,7 +1002,7 @@ draw_blank_at_cursor:
     mov al, [olive]
     mov [text_color], al
     
-    mov al, 32  ;blank space
+    mov al, 65  ;blank space
     call print_char
     
     ;grab old x and y offsets
@@ -1163,6 +1325,88 @@ print_char:
 
 
 
+
+;prints the ascii byte in al
+print_char_cursor:
+    push si
+    push bx
+    ;both these counters need to be reset before every glyph anyways, universal locations are kept track of in [x_offset], [y_offset], divided by 4,for actual character location out of 0-79 cols and 0-32 rows, for a toal of 2640 chars
+    mov bx, 0
+    mov di, [cursor_offsetx] ; [x_offset] works great for printing char by offset as well
+    
+    
+
+    call save_char_cursor  ;saves the char into page_data in its character of 2112 spots
+
+    ;preserve ax here just in case
+    push ax
+    mov ax, [cursor_offsety]
+    imul ax, 320   ;y*320
+    add di, ax
+    pop ax
+
+.rest_of_print_char:
+
+
+    call plot_row_glyph
+
+
+    inc bx          ;increment row of glyph
+    add di, 320     ;next row, 320 pixel offset for di
+    cmp bx, 6        ;loop 0-5
+    jl .rest_of_print_char
+
+    
+    pop bx
+    pop si
+    ret
+
+save_char_cursor:
+
+    push ax
+    push di    
+    push dx
+    push bx
+    push si
+    push ds
+
+    ;x/5
+    push ax
+    mov ax, [cursor_offsetx]
+    mov dx, 0
+    mov bx, 5
+    div bx
+    mov si, ax
+    pop ax
+
+    ;y/6 * 64
+    push ax
+    mov ax, [cursor_offsety]
+    mov dx, 0
+    mov bx, 6
+    div bx
+    imul ax, 64
+    add si, ax
+    pop ax
+
+
+    ;si should be offset for page_data now for entered al
+    mov byte [page_data + si], al
+    ;al is stores its ascii character in the 2112 bytes of characters
+
+
+    pop ds
+    pop si
+    pop bx
+    pop dx
+    pop di
+    pop ax
+
+    ret
+
+
+
+
 new_line:
     add word [y_offset], 6
     add word [cursor_offsety], 6
@@ -1209,6 +1453,84 @@ next_char:
 .next:
     call new_line
     ret
+
+
+
+
+
+next_cursor:
+
+    add word [cursor_offsetx], 5
+    cmp word [cursor_offsetx], 320
+
+    jge .next
+    ret
+
+.next:
+
+    add word [cursor_offsety], 6
+    mov word [cursor_offsetx], 0
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+next_char_nocursor:
+    add word [x_offset], 5    ; should increment by 5
+
+    cmp word [x_offset], 320
+    jge .next
+    ret
+
+.next:
+    call new_line_nocursor
+    ret
+
+
+
+
+
+
+new_line_nocursor:
+    add word [y_offset], 6
+    mov word [x_offset], 0
+
+    ;33 rows startinf including 0
+    cmp word [row], 32
+    
+    je .row_end
+    inc word [row]
+    ret
+
+.row_end:
+
+
+    mov word [row], 0
+    mov word [y_offset], 0
+
+    mov word [x_offset], 0
+
+    ret
+
 
 
 ;take ascii, x, and y
