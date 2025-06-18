@@ -6,7 +6,7 @@ This is where my code is for the kernel and bootloader.
 <br>
 
 ---
-Current implementation in real mode x86. Planning on adding switch to protected mode keyword now that input buffer works for any kind of input and wont cause errors.
+Current implementation in real mode x86. Planning on adding switch to protected mode keyword now that input buffer works for any kind of input and wont cause errors.<br>
 
 ---
 
