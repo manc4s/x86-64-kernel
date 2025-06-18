@@ -17,3 +17,7 @@ Current implementation in real mode x86. Planning on adding switch to protected 
 &nbsp;&nbsp;- accepts input into input buffer, with cursor to edit input before entering.<br>
 
 
+
+
+https://github.com/user-attachments/assets/8a1ebe96-592c-4319-b0a0-e1f4ce9744db
+
