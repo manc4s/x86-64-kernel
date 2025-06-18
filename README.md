@@ -7,6 +7,7 @@ This is where my code is for the kernel and bootloader.
 
 ---
 Current implementation in real mode x86. Planning on adding switch to protected mode keyword now that input buffer works for any kind of input and wont cause errors.
+
 ---
 
 **I developped my bootloader in another repository. On boot it looks for a quick input y or n to continue onto the far jump.** <br>
