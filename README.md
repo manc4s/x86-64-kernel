@@ -1,28 +1,20 @@
 ## x86-64-kernel
 
 ---
-This is where my code is for the kernel and bootloader, + bash script to run and concatenate the binaries together quickly and run.<br>
+This is where my code is for the kernel and bootloader.
++ bash script (kernel_testing_batch.bat) to run and concatenate the binaries together and run the code in QEMU emulator with NASM assembler to turn x86 assembly code to binaries.<br>
 <br>
 
 ---
-This kernel will be developped in real mode because of the ascii interupts rather than using the<br> 
-scancode, but even if i do swap to the scan codes then i will change the display resolutinon. Currently<br>
-no protected mode so no segmentation, no gdt. Once i eventually get a working shell I will<br>
-swap to protected mode and look into VBE for higher resolution, because VGA 640x480x16 has less<br>
-colors with 4 planes, and is a big pain to get working. I'd prefer to continue with the real <br>
-mode (0xA0000 - 0xAFFFF) video memory for 13 h mode where its one byte per pixel for 256 colors <br>
-rather than messing with the planes, while messing with the gdt, while trying to figure out 32 bit<br>
-mode completely.<br>
-<br>
-**Thus for now the project will resume in real mode.**<br>
-<br>
-
+Current implementation in real mode x86. Planning on adding switch to protected mode keyword now that input buffer works for any kind of input and wont cause errors.
 ---
-**I developped my bootloader in another repository.** <br>
+
+**I developped my bootloader in another repository. On boot it looks for a quick input y or n to continue onto the far jump.** <br>
+
+*Current CLI(command line interface) features,(real mode) after bootloader runs and then far jumping to 0x10000*<br>
 &nbsp;&nbsp;-4x6 custom glyphs<br>
 &nbsp;&nbsp;-13 hour mode<br>
 &nbsp;&nbsp;-2112 chars per page.<br>
+&nbsp;&nbsp;accepts input into input buffer, with cursor to edit input before entering.<br>
 
-**next steps:**<br>
-&nbsp;&nbsp;-refactoring required to make sure the cursor, input and texts can work cohesively<br>
-    
+
