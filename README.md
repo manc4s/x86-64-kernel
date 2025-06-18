@@ -23,5 +23,7 @@ Current implementation in real mode x86. Planning on adding switch to protected 
 
 
 
-https://github.com/user-attachments/assets/8a1ebe96-592c-4319-b0a0-e1f4ce9744db
+https://github.com/user-attachments/assets/6167dc8e-5e9f-4bb4-b218-16c2c86f79e0
+
+
 
