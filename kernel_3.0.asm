@@ -1296,7 +1296,7 @@ toggle_cursor_color:
     mov word [cursor_counter], 0
     
     ;cursor color 1
-    mov byte al, [black]
+    mov byte al, [cursor_bg_1]
     cmp byte [cursor_bg], al
     je .to_black
     mov byte [cursor_bg], al
@@ -1305,7 +1305,7 @@ toggle_cursor_color:
 .to_black:
     
     ;cursor_color2
-    mov al, [yella]
+    mov al, [cursor_bg_2]
     mov byte [cursor_bg], al
 
 .end:
@@ -1322,16 +1322,16 @@ draw_blank:
     
     ;preserve ax
     push ax
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [text_color], al
     mov al, 32  ;blank space
     call print_char
     
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [white]
+    mov al, [text_revert]
     mov [text_color], al
     pop ax
     ret
@@ -1362,9 +1362,9 @@ draw_blank_at_cursor:
     mov word [y_offset], cx
 
 
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [text_color], al
     
     mov al, 32  ;blank space
@@ -1378,9 +1378,9 @@ draw_blank_at_cursor:
     mov word [x_offset], bx
 
 
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [white]
+    mov al, [text_revert]
     mov [text_color], al 
 
 
@@ -1421,9 +1421,9 @@ erase_cursor:
 
 
 
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [white]
+    mov al, [text_revert]
     mov [text_color], al
     
     ;call scan_glyph_at_cursor
@@ -1440,9 +1440,9 @@ erase_cursor:
     mov word [x_offset], bx
 
     
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [white]
+    mov al, [text_revert]
     mov [text_color], al
 
 
@@ -1502,9 +1502,9 @@ draw_cursor:
 
 
     
-    mov al, [olive]
+    mov al, [bg_revert]
     mov [bg_color], al
-    mov al, [white]
+    mov al, [text_revert]
     mov [text_color], al
 
 
