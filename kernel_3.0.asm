@@ -37,7 +37,10 @@ main:
     mov si, shell_line
     call print_string
     mov word [input_size], 0
-    
+
+
+
+;toggling cursor and taking input via 0x16 command.
 .main_loop:
 
 
@@ -78,8 +81,12 @@ main:
     jne .continue
     jmp .main_loop      ; at last char, don't allow more input
 
-.continue:
 
+
+
+
+;Hnadling input.
+.continue:
 
     cmp word [cursor_left], 0
     jne .continue2
@@ -104,8 +111,17 @@ main:
 
 
 
+;input if cursor_left>0 meaning that you are inputting wihting the string you entered already
 .continue2:
+
+    ;maks input string, even if you are entering when cursor_left>0.
     cmp word [input_size], 999
+    jge .main_loop
+
+    ;temporarily fixes the bug that if the cursor is at the end of line but 
+    ;cursor_left > 0 means that there is no wrapping for line shifts so you must just cut the input off at the end of line
+    ;in the case cursor_left > 0 otherwise its fine to take input at that posiition.
+    cmp word [cursor_offsetx], 315
     jge .main_loop
 
 
@@ -117,6 +133,7 @@ main:
 
 
 
+;handling enter press
 .enter_press:
     call draw_blank
     call erase_cursor
@@ -143,14 +160,14 @@ main:
     jmp main
 
 
-.shift_test:
-  
-    call shifter
 
-    jmp .main_loop
 
+
+;handling backspace  from end of line
 .backspace:
 
+    cmp word [cursor_left], 0
+    jne .backspace2
 
     ;size of input buffer is none, jump. to the top of taking inputs again
     cmp word [input_size], 0
@@ -172,17 +189,40 @@ main:
 
     ;call backspace for visually drawing
     ;call backspace
-    call draw_blank
+    call draw_blank_at_cursor
     call decrement_position
-    call draw_blank
+    call draw_blank_at_cursor
     jmp .main_loop
 
 
+
+;backspace if inside of the input buffer meaning cursor_left > 0
+.backspace2:
+
+    ;no more backspace, jump to mainloop if the cursor_left has backed enough to be at input_size
+    push ax
+    mov ax, [cursor_left]
+    cmp word [input_size], ax
+    pop ax
+    je .main_loop
+
+
+
+    call shifter_left
+    jmp .main_loop
+
+
+
+
+;handling right arrow press for moving through input buffer.
 .rightarrow:
     call move_cursor_right
     jmp .main_loop
 
 
+
+
+;handling left arrow press for moving through input buffer.
 .leftarrow:
     call move_cursor_left
     jmp .main_loop
@@ -193,42 +233,54 @@ main:
 
 
 
+
+
+
+;shift everything from back to front
 shifter:
 
-    ;call erase_cursor
     call shift_whole_screen2
     call shift_whole_screen_4
+    ;call print_char_cursor
+    ;call next_cursor
+    
+    call shift_input_buffer
+    call next_char_nocursor ;make sure to increment x and y offset on inputs
     call print_char_cursor
     call next_cursor
-    ;call draw_blank_at_cursor
-    ;call next_char_nocursor
-    ;call print_char_cursor
-    ;call next_char
 
     
-    ;push bx
-    ;mov bx, [input_size]
-    ;mov byte [input_buffer + bx], 'A'
-    ;mov byte [input_buffer + bx + 1], 0
-    ;pop bx
-
-    ;inc word [input_size]
-    ;inc word [cursor_left]
-
-
-    call shift_input_buffer
-
-    ;push bx
-    ;mov bx, [input_size]
-    ;sub bx, [cursor_left]
-    ;mov byte [input_buffer + bx], al
-    ;pop bx
-
-    ;inc word [input_size]
-  
-
-
     ret
+
+
+
+
+
+
+
+
+;shift everything back for backspace, overwrite the current position is the easiest way.
+;shouldnt need print char or next char or next cursor
+shifter_left:
+
+
+    call shift_whole_screen_6
+    call shift_page_data_back
+    call shift_input_buffer_back
+    dec word [input_size]
+    
+    call erase_cursor
+    call decrement_cursor
+    call decrement_nocursor
+    
+    
+    ret
+
+
+
+
+
+
 
 
 
@@ -286,7 +338,9 @@ shift_whole_screen3:
 
 
 
-
+;shift the bytes in the input buffer from offset input_size - cursor_left, 
+;shifts from back to front.
+;shifts thigns right
 shift_input_buffer:
     push si
     push ax
@@ -349,7 +403,113 @@ shift_input_buffer:
 
 
 
-; Shift entire video memory as one continuous block
+
+
+
+
+
+
+
+
+
+;shift the bytes in the input buffer from offset input_size - cursor_left, 
+;shifts from front to back, overwrite the first byte
+;shifts things left
+shift_input_buffer_back:
+
+
+    push si
+    push ax
+    push cx
+    push dx
+    push bx
+    push di
+
+
+    mov si, input_buffer
+    add si, [input_size]
+    sub si, [cursor_left]
+    sub si, 1
+
+
+.shifting_loop:
+    
+    
+    cmp byte [si + 1], 0
+    je .end
+
+    mov al, [si + 1]
+    mov [si], al
+    inc si
+    
+    jmp .shifting_loop
+
+
+.end:
+
+
+    mov byte [si], 0
+
+    pop di
+    pop bx
+    pop dx
+    pop cx
+    pop ax
+    pop si
+    
+    ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+;shift page_data one byte at a time from the back to the cursor xy position
+;this preserves all the values and shifts to make space for values to enter.
+;shifts asciis in page_data right
 shift_whole_screen2:
     push si
     push ax
@@ -398,6 +558,83 @@ shift_whole_screen2:
     pop ax
     pop si
     ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+;shift page_data one byte at a time from the front from the cursor xy position
+;moves to the left overwriting the value on the left as well.
+;shifts asciis in page_data left
+shift_page_data_back:
+
+    push si
+    push ax
+    push cx
+    push dx
+    push bx
+    push di
+
+  
+    mov si, page_data
+    
+
+
+    mov ax, [cursor_offsety]
+    mov dx, 0
+    mov bx, 6
+    div bx
+    imul ax, 64
+    add si, ax
+
+
+    mov ax, [cursor_offsetx]
+    mov dx, 0
+    mov bx, 5
+    div bx 
+    add si, ax
+
+
+    sub si, 1
+
+
+.shifting_loop:
+    
+    
+    cmp si, page_data_end-1
+    je .end
+
+    mov al, [si + 1]
+    mov [si], al
+    inc si
+
+    jmp .shifting_loop
+
+
+.end:
+
+    mov byte [si], 0
+    ;mov byte [si + 1], 0
+    mov byte [si + input_size - cursor_left], 0
+    pop di
+    pop bx
+    pop dx
+    pop cx
+    pop ax
+    pop si
+    
+    ret
+
+
+
 
 
 
@@ -522,10 +759,134 @@ shift1605:
 
 
 
+
+
+
+
+
+
+
+
+
+
+; Shift entire video memory (320x200)
+shift_whole_screen_6:
+    push si
+    push di
+    push ax
+    push cx
+    push dx
+    push bx
+
+    mov bx, 0
+    
+    mov dx, 200         ; Number of rows (entire screen height)
+    sub dx, [cursor_offsety]
+
+
+
+    mov ax, [cursor_offsety]
+    imul ax, 320
+    mov si, ax         ;start from front
+
+
+.row_loop:
+    push si             ; Save current row start
+    mov cx, 0         ; Shift 315 pixels per row (320-5)
+    inc bx
+
+
+
+.shift_loop:
+    inc cx
+
+    cmp bx, 6
+    jg .no_offset
+
+    cmp cx, [cursor_offsetx]
+    jl .pass_loop
+
+.no_offset:
+
+    cmp cx, 315
+    jl .continue
+
+    call shift1605left
+
+    jmp .c
+
+.continue:
+    call shift5left
+    jmp .c
+
+.pass_loop:
+
+    inc si
+
+
+   
+
+    
+.c:
+    
+    cmp cx, 320
+    jl .shift_loop
+    
+
+.next:
+
+    pop si              ; Restore row start
+    add si, 320         ; Move to end of next row
+    dec dx
+    jnz .row_loop       ; Continue if more rows to process
+    
+
+.end:
+    pop bx
+    pop dx
+    pop cx
+    pop ax
+    pop di
+    pop si
+    ret
+
+    
+shift5left:
+
+    mov al, [es:si + 5]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it
+    inc si
+
+    ret
+
+shift1605left:
+
+
+    cmp si, 62394
+    
+    jae .other
+
+    mov al, [es:si + 1605]   ; Get pixel 5 positions to the left
+    mov [es:si], al     ; Store it  
+    inc si
+    ret
+
+
+.other:
+    mov al, [bg_color]
+    mov byte [es:si], al
+    inc si
+    ret
+
+
+
+
+
+
+
+
+
 ;same as shift whole screen 4 but rather than shifting the line from which the cursor is, it shifts the line from the x and y input via
-;ax register input y
-;bx register input x
-;
 shift_whole_screen_5:
     push si
     push di
@@ -534,17 +895,21 @@ shift_whole_screen_5:
     push dx
     
     mov dx, 200         ; Number of rows (entire screen height)
-    sub dx, ax
+    sub dx, [cursor_offsety]
    
+
+    mov ax, [cursor_offsety]
     imul ax, 320
-    add ax, 319
-    mov si, ax         ; Start from end of first row
+    add ax, [cursor_offsetx]
+    mov si, ax     ;start from offset
     
 
 
 .row_loop:
     push si             ; Save current row start
     mov cx, 315         ; Shift 315 pixels per row (320-5)
+    
+    mov bx, [cursor_offsetx]
     sub cx, bx
     
 .shift_loop:
@@ -1002,7 +1367,7 @@ draw_blank_at_cursor:
     mov al, [olive]
     mov [text_color], al
     
-    mov al, 65  ;blank space
+    mov al, 32  ;blank space
     call print_char
     
     ;grab old x and y offsets
@@ -1460,10 +1825,15 @@ next_char:
 
 next_cursor:
 
-    add word [cursor_offsetx], 5
-    cmp word [cursor_offsetx], 320
 
+
+    cmp word [cursor_offsetx], 315
     jge .next
+
+
+    add word [cursor_offsetx], 5
+
+
     ret
 
 .next:
@@ -1478,14 +1848,38 @@ next_cursor:
 
 
 
+decrement_cursor:
+
+    cmp word [cursor_offsetx], 0
+    jle .next
+
+    sub word [cursor_offsetx], 5
+    
+    ret
+
+.next:
+
+    sub word [cursor_offsety], 6
+    mov word [cursor_offsetx], 315
+    ret
 
 
 
 
 
+decrement_nocursor:
 
+    cmp word [x_offset], 0
+    jle .next
 
+    
+    sub word [x_offset], 5    ; should increment by 5
+    ret
 
+.next:
+    sub word [y_offset], 6
+    mov word [x_offset], 315
+    ret
 
 
 
