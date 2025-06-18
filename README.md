@@ -19,6 +19,6 @@ Current implementation in real mode x86. Planning on adding switch to protected 
 
 
 
-**demonstration of working input buffer June 17th 2025, full video in repository as June17-2025 - demonstration-working_input_buffer.mp4**
+**demonstration of working input buffer June 17th 2025, full video in repository as June17-2025 - demonstration-working_input_buffer.mp4**<br>
 https://github.com/user-attachments/assets/8a1ebe96-592c-4319-b0a0-e1f4ce9744db
 
