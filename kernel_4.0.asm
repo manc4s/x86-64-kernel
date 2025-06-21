@@ -4,41 +4,64 @@ ORG 0x10000
 
 [bits 32]
 protected_start:
-    ; Set up segments
-    mov ax, 0x10        ; Data segment selector
+    ;; Set up segments
+    ; Set up segment registers
+    mov ax, 0x10     ; data segment selector = index 2 * 8
     mov ds, ax
-    mov es, ax
+    mov fs, ax
+    mov gs, ax
 
     mov ax, 0x18
     mov ss, ax
-    mov esp, 0x101000    ; Top of your stack segment
-    
-    ; Test - write something to video memory
-    
-    mov eax, 'P'
-    push eax
-    mov byte [0xB8000], al
-    mov byte [0xB8001], 0x07
+
+    mov esp, 0x101000    ;; Top of your stack segment
 
     
-    mov eax, "E"
-    mov byte [0xB8002], al
-    mov byte [0xB8003], 0x07
+    ;track location where VRAM is for 13 hour mode
+    mov ax, 0x20
+    mov es, ax
+    
+    ;; Test - write something to video memory
+    
+    ;mov eax, 'P'
+    ;push eax
+    ;mov byte [0xB8000], al
+    ;mov byte [0xB8001], 0x07
+
+    
+    ;mov eax, "E"
+    ;mov byte [0xB8002], al
+    ;mov byte [0xB8003], 0x07
     
 
-    pop eax
-    mov byte [0xB8002], al
-    mov byte [0xB8003], 0x07
+    ;pop eax
+    ;mov byte [0xB8002], al
+    ;mov byte [0xB8003], 0x07
     
 
-    mov ecx, 0    
-    jmp lain
+    ;mov ecx, 0    
+    ;mov edx, 0
+
+    mov eax, 0
+    jmp kernel
+
+    
+
 
 
 lain:
 
-    
+    cmp edx, 0
+    jne .notequal
     mov eax, "E"
+    mov byte [0xB8000], al
+    mov byte [0xB8001], 0x07
+    inc edx
+
+
+.notequal:
+    mov edx, 0
+    mov eax, "P"
     mov byte [0xB8000], al
     mov byte [0xB8001], 0x07
 
@@ -56,6 +79,8 @@ lain:
     mov ah, al
     movzx ebx, ah
     mov al, [scancode_to_ascii + ebx]
+
+
 
     mov dword ecx, [test_counter]
     mov byte [0xb8000 + ecx], al
@@ -75,66 +100,35 @@ lain:
 
 kernel:
 
-    ; Set up segment registers
-    mov ax, 0x10     ; data segment selector = index 2 * 8
-    mov ds, ax
-    mov fs, ax
-    mov gs, ax
-
-    mov ax, 0x18
-    mov ss, ax
-
-    mov esp, 0xB0FFF ; top of your stack (stack segment base + limit)
- 
-
-    
-    ;track location where VRAM is for 13 hour mode
-    mov ax, 0xA000
-    mov es, ax
 
 
     ;draw the bg, so you can see the 320x200 screen in qemu, turns to selected bg_color
     call clear_screen
 
      
-    jmp main
+    
 
 
 
 main:
-    jmp .hang
-
-    mov di, 0
-    mov ax, 65
-    call print_char
-    add word [x_offset], 6
-
-
-    mov byte [text_color], 0x00
-    mov si, shell_line
-    call print_string
-
-
-    mov byte [bg_color], 0x04
-    mov byte [text_color], 0x0f
-    mov word [x_offset], 100
-    mov word [y_offset], 100
-    call print_string
-
-
-
-    mov word [x_offset], 0
-    mov word [y_offset], 6
+    
 
 
 .input_loop:
    
 
-    mov al, 'A'
+    mov al, 65
     call print_char
     call next_char
 
-    jmp .input_loop
+
+
+    mov al, 66
+    call print_char
+    call next_char
+
+
+    
 
 
 
@@ -198,20 +192,25 @@ next_char:
     ret
 
 
+
+
+
+
+
 print_char:
-    push si
-    push bx
+    push esi
+    push ebx
     ;both these counters need to be reset before every glyph anyways, universal locations are kept track of in [x_offset], [y_offset], divided by 4,for actual character location out of 0-79 cols and 0-32 rows, for a toal of 2640 chars
-    mov bx, 0
-    mov di, [x_offset] ; [x_offset] works great for printing char by offset as well
+    mov ebx, 0
+    mov edi, [x_offset] ; [x_offset] works great for printing char by offset as well
     
     
     ;preserve ax here just in case
-    push ax
-    mov ax, [y_offset]
-    imul ax, 320   ;y*320
-    add di, ax
-    pop ax
+    push eax
+    mov eax, [y_offset]
+    imul eax, 320   ;y*320
+    add edi, eax
+    pop eax
 
 .rest_of_print_char:
 
@@ -219,14 +218,14 @@ print_char:
     call plot_row_glyph
 
 
-    inc bx          ;increment row of glyph
-    add di, 320     ;next row, 320 pixel offset for di
-    cmp bx, 6        ;loop 0-5
+    inc ebx          ;increment row of glyph
+    add edi, 320     ;next row, 320 pixel offset for di
+    cmp ebx, 6        ;loop 0-5
     jl .rest_of_print_char
 
 
-    pop bx
-    pop si
+    pop ebx
+    pop esi
     ret
 
 
@@ -241,20 +240,30 @@ plot_row_glyph:
 
     mov ah, 0 ; just in case the input in ah is not 0 so it doesn mess up
     
-    push ax
+    push eax
     
 
     ;alphabet(location of all 4x6 glyphs)
-    mov si, alphabet
-    add si, bx  ;which glyph row
-    imul ax, 6
-    add si, ax
-    sub si, 192
+    ;mov esi, alphabet
+    ;add esi, ebx  ;which glyph row
+    ;imul eax, 6
+    ;add esi, eax
+    ;sub esi, 192
+
+
+
+      ;ASCII 32 (space) is the first character in your alphabet array
+    sub eax, 32           ; Convert ASCII to index (space = 0, ! = 1, etc.)
+    mov esi, alphabet     ; Start of glyph data
+    imul eax, 6           ; Each glyph is 6 bytes
+    add esi, eax           ; Point to start of character's glyph data
+    add esi, ebx           ; Add row offset (0-5 for each row of the glyph)
+   
    
     ;After adding glyph row from prvious bx
-    push bx
-    mov al, [si]         ; AL = row byte, lower 4 bits are the pixels
-    mov bx, 0            ; pixel index (0 to 3)
+    push ebx
+    mov al, [esi]         ; AL = row byte, lower 4 bits are the pixels
+    mov ebx, 0            ; pixel index (0 to 3)
 
     
    
@@ -269,10 +278,10 @@ plot_row_glyph:
 
     jz .write_bg
     
-    push ax
+    push eax
     mov al, [text_color]
-    mov byte [es:di+bx], al    ; plot pixel (red) if bit is set
-    pop ax
+    mov byte [es:edi+ebx], al    ; plot pixel (red) if bit is set
+    pop eax
 
 
     jmp .next
@@ -280,22 +289,22 @@ plot_row_glyph:
 .write_bg:
 
     
-    push ax
+    push eax
     mov al, [bg_color]
-    mov byte [es:di+bx], al    ; plot background
-    pop ax
+    mov byte [es:edi+ebx], al    ; plot background
+    pop eax
     
 .next:
 
     
-    inc bx
-    cmp bx, 4
+    inc ebx
+    cmp ebx, 4
     jl .loop
     
 
 
-    pop bx
-    pop ax
+    pop ebx
+    pop eax
 
 
     ret
@@ -311,7 +320,7 @@ clear_screen:
 
     mov di, 0                ; Start at offset 0 (row 0)
     mov cx, 320*200              ; 320 pixels in the first row
-    mov al, 0x1f    ;selected bg color in data, byte long        ; Color 00011100 (28),
+    mov al, 0x44    ;selected bg color in data, byte long        ; Color 00011100 (28),
 
 
 .fill_row:
