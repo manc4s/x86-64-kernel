@@ -1,16 +1,92 @@
-[BITS 16]
+
 ORG 0x10000
 
-start:
-    ;initialize the pointers
-    mov ax, 0x1000
+
+[bits 32]
+protected_start:
+    ; Set up segments
+    mov ax, 0x10        ; Data segment selector
     mov ds, ax
     mov es, ax
+
+    mov ax, 0x18
+    mov ss, ax
+    mov esp, 0x101000    ; Top of your stack segment
+    
+    ; Test - write something to video memory
+    
+    mov eax, 'P'
+    push eax
+    mov byte [0xB8000], al
+    mov byte [0xB8001], 0x07
+
+    
+    mov eax, "E"
+    mov byte [0xB8002], al
+    mov byte [0xB8003], 0x07
+    
+
+    pop eax
+    mov byte [0xB8002], al
+    mov byte [0xB8003], 0x07
+    
+
+    mov ecx, 0    
+    jmp lain
+
+
+lain:
+
+    
+    mov eax, "E"
+    mov byte [0xB8000], al
+    mov byte [0xB8001], 0x07
+
+
+    ;32 bit solution for taking scancodes and convering to ascii.
+    in al, 0x64
+    test al, 1
+    jz lain
+
+    in al, 0x60
+    test al, 0x80
+    jnz lain
+
+
+    mov ah, al
+    movzx ebx, ah
+    mov al, [scancode_to_ascii + ebx]
+
+    mov dword ecx, [test_counter]
+    mov byte [0xb8000 + ecx], al
+    inc ecx
+    mov byte [0xb8000 + ecx], 0x07
+    inc ecx
+    add dword [test_counter], 2
+
+    jmp lain
+
+
+
+
+
+
+
+
+kernel:
+
+    ; Set up segment registers
+    mov ax, 0x10     ; data segment selector = index 2 * 8
+    mov ds, ax
+    mov fs, ax
+    mov gs, ax
+
+    mov ax, 0x18
     mov ss, ax
 
-    ; 13 hour mode, 
-    mov ax, 0x13
-    int 0x10
+    mov esp, 0xB0FFF ; top of your stack (stack segment base + limit)
+ 
+
     
     ;track location where VRAM is for 13 hour mode
     mov ax, 0xA000
@@ -26,10 +102,12 @@ start:
 
 
 main:
+    jmp .hang
 
     mov di, 0
     mov ax, 65
     call print_char
+    add word [x_offset], 6
 
 
     mov byte [text_color], 0x00
@@ -42,6 +120,23 @@ main:
     mov word [x_offset], 100
     mov word [y_offset], 100
     call print_string
+
+
+
+    mov word [x_offset], 0
+    mov word [y_offset], 6
+
+
+.input_loop:
+   
+
+    mov al, 'A'
+    call print_char
+    call next_char
+
+    jmp .input_loop
+
+
 
     
 .hang:
@@ -143,6 +238,9 @@ print_char:
 ;plots a row from a glyph
 plot_row_glyph:
    
+
+    mov ah, 0 ; just in case the input in ah is not 0 so it doesn mess up
+    
     push ax
     
 
@@ -213,7 +311,7 @@ clear_screen:
 
     mov di, 0                ; Start at offset 0 (row 0)
     mov cx, 320*200              ; 320 pixels in the first row
-    mov al, [bg_color]    ;selected bg color in data, byte long        ; Color 00011100 (28),
+    mov al, 0x1f    ;selected bg color in data, byte long        ; Color 00011100 (28),
 
 
 .fill_row:
@@ -238,6 +336,7 @@ clear_screen:
 
 
 
+%include "data_4.0.asm"
 
 
 
@@ -269,219 +368,3 @@ clear_screen:
 
 
 
-
-entered: db "Successfully Entered Kernel ...........................................................................................",0 
-shell_line: db "kernel-shell-v1-$", 0
-
-
-x_offset: dw 0   ;current position
-y_offset: dw 0
-
-
-bg_color: db 0x44  ;0xd5 olive green
-text_color: db 0x0f  ;white
-
-
-
-
-cursor_x: dw 0
-cursor_y: dw 0
-
-plot_4by5_color: db 0x00 ;
-
-;all chars 0-128, 4x6. 
-;for 13h mode, custom 4x6 font
-alphabet:  
-
-    ;32: Space
-    db 0b0000,0b0000,0b0000,0b0000,0b0000,0b0000
-    ; 33: !
-    db 0b0010,0b0010,0b0010,0b0010,0b0000,0b0010
-    ; 34: "
-    db 0b0101,0b0101,0b0000,0b0000,0b0000,0b0000
-    ; 35: #
-    db 0b0101,0b1111,0b0101,0b1111,0b0101,0b0000
-    ; 36: $
-    db 0b0110,0b1010,0b0110,0b0101,0b0110,0b0000
-    ; 37: %
-    db 0b1100,0b1101,0b0010,0b1011,0b0011,0b0000
-    ; 38: &
-    db 0b0110,0b1001,0b0110,0b1001,0b0111,0b0000
-    ; 39: '
-    db 0b0010,0b0010,0b0000,0b0000,0b0000,0b0000
-    ; 40: (
-    db 0b0010,0b0100,0b0100,0b0100,0b0010,0b0000
-    ; 41: )
-    db 0b0100,0b0010,0b0010,0b0010,0b0100,0b0000
-    ; 42: *
-    db 0b0000,0b0101,0b0010,0b0101,0b0000,0b0000
-    ; 43: +
-    db 0b0000,0b0010,0b0111,0b0010,0b0000,0b0000
-    ; 44: ,
-    db 0b0000,0b0000,0b0000,0b0010,0b0100,0b0000
-    ; 45: -
-    db 0b0000,0b0000,0b0111,0b0000,0b0000,0b0000
-    ; 46: .
-    db 0b0000,0b0000,0b0000,0b0010,0b0000,0b0000
-    ; 47: /
-    db 0b0001,0b0010,0b0100,0b1000,0b0000,0b0000
-    ; 48: 0
-    db 0b0110,0b1001,0b1001,0b1001,0b0110,0b0000
-    ; 49: 1
-    db 0b0010,0b0110,0b0010,0b0010,0b0111,0b0000
-    ; 50: 2
-    db 0b0110,0b1001,0b0010,0b0100,0b1111,0b0000
-    ; 51: 3
-    db 0b0110,0b0001,0b0110,0b0001,0b0110,0b0000
-    ; 52: 4
-    db 0b0001,0b0011,0b0101,0b1111,0b0001,0b0000
-    ; 53: 5
-    db 0b1111,0b1000,0b1110,0b0001,0b1110,0b0000
-    ; 54: 6
-    db 0b0110,0b1000,0b1110,0b1001,0b0110,0b0000
-    ; 55: 7
-    db 0b1111,0b0001,0b0010,0b0100,0b0100,0b0000
-    ; 56: 8
-    db 0b0110,0b1001,0b0110,0b1001,0b0110,0b0000
-    ; 57: 9
-    db 0b0110,0b1001,0b0111,0b0001,0b0110,0b0000
-    ; 58: :
-    db 0b0000,0b0010,0b0000,0b0010,0b0000,0b0000
-    ; 59: ;
-    db 0b0000,0b0010,0b0000,0b0010,0b0100,0b0000
-    ; 60: <
-    db 0b0001,0b0010,0b0100,0b0010,0b0001,0b0000
-    ; 61: =
-    db 0b0000,0b0111,0b0000,0b0111,0b0000,0b0000
-    ; 62: >
-    db 0b0100,0b0010,0b0001,0b0010,0b0100,0b0000
-    ; 63: ?
-    db 0b0110,0b1001,0b0010,0b0000,0b0010,0b0000
-    ; 64: @
-    db 0b0110, 0b1001, 0b1011, 0b1011, 0b0110, 0b0000
-    ; 65: A
-    db 0b0110,0b1001,0b1111,0b1001,0b1001,0b0000
-    ; 66: B
-    db 0b1110,0b1001,0b1110,0b1001,0b1110,0b0000
-    ; 67: C
-    db 0b0110,0b1001,0b1000,0b1001,0b0110,0b0000
-    ; 68: D
-    db 0b1110,0b1001,0b1001,0b1001,0b1110,0b0000
-    ; 69: E
-    db 0b1111,0b1000,0b1110,0b1000,0b1111,0b0000
-    ; 70: F
-    db 0b1111,0b1000,0b1110,0b1000,0b1000,0b0000
-    ; 71: G
-    db 0b0110,0b1000,0b1011,0b1001,0b0111,0b0000
-    ; 72: H
-    db 0b1001,0b1001,0b1111,0b1001,0b1001,0b0000
-    ; 73: I
-    db 0b0111,0b0010,0b0010,0b0010,0b0111,0b0000
-    ; 74: J
-    db 0b0001,0b0001,0b0001,0b1001,0b0110,0b0000
-    ; 75: K
-    db 0b1001,0b1010,0b1100,0b1010,0b1001,0b0000
-    ; 76: L
-    db 0b1000,0b1000,0b1000,0b1000,0b1111,0b0000
-    ; 77: M
-    db 0b1001,0b1111,0b1111,0b1001,0b1001,0b0000
-    ; 78: N
-    db 0b1001,0b1101,0b1111,0b1011,0b1001,0b0000
-    ; 79: O
-    db 0b0110,0b1001,0b1001,0b1001,0b0110,0b0000
-    ; 80: P
-    db 0b1110,0b1001,0b1110,0b1000,0b1000,0b0000
-    ; 81: Q
-    db 0b0110,0b1001,0b1001,0b1011,0b0111,0b0000
-    ; 82: R
-    db 0b1110,0b1001,0b1110,0b1010,0b1001,0b0000
-    ; 83: S
-    db 0b0111,0b1000,0b0110,0b0001,0b1110,0b0000
-    ; 84: T
-    db 0b1111,0b0010,0b0010,0b0010,0b0010,0b0000
-    ; 85: U
-    db 0b1001,0b1001,0b1001,0b1001,0b0110,0b0000
-    ; 86: V
-    db 0b1001,0b1001,0b1001,0b0110,0b0100,0b0000
-    ; 87: W
-    db 0b1001,0b1001,0b1111,0b1111,0b1001,0b0000
-    ; 88: X
-    db 0b1001,0b0110,0b0100,0b0110,0b1001,0b0000
-    ; 89: Y
-    db 0b1001,0b0110,0b0010,0b0010,0b0010,0b0000
-    ; 90: Z
-    db 0b1111,0b0001,0b0110,0b1000,0b1111,0b0000
-    ; 91: [
-    db 0b0110,0b0100,0b0100,0b0100,0b0110,0b0000
-    ; 92: '\'
-    db 0b1000,0b0100,0b0010,0b0001,0b0000,0b0000
-    ; 93: ]
-    db 0b0110,0b0010,0b0010,0b0010,0b0110,0b0000
-    ; 94: ^
-    db 0b0010,0b0101,0b0000,0b0000,0b0000,0b0000
-    ; 95: _
-    db 0b0000,0b0000,0b0000,0b0000,0b1111,0b0000
-    ; 96: `
-    db 0b0100,0b0010,0b0000,0b0000,0b0000,0b0000
-    ; 97: a
-    db 0b0000,0b0110,0b0001,0b0111,0b0111,0b0000
-    ; 98: b
-    db 0b1000,0b1110,0b1001,0b1001,0b1110,0b0000
-    ; 99: c
-    db 0b0000,0b0111,0b1000,0b1000,0b0111,0b0000
-    ; 100: d
-    db 0b0001,0b0111,0b1001,0b1001,0b0111,0b0000
-    ; 101: e
-    db 0b0000,0b0111,0b1111,0b1000,0b0111,0b0000
-    ; 102: f
-    db 0b0011,0b0100,0b1110,0b0100,0b0100,0b0000
-    ; 103: g
-    db 0b0000,0b0110,0b1010,0b0110,0b0010,0b0110
-    ; 104: h
-    db 0b1000,0b1110,0b1001,0b1001,0b1001,0b0000
-    ; 105: i
-    db 0b0010,0b0000,0b0110,0b0010,0b0111,0b0000
-    ; 106: j
-    db 0b0000,0b0001,0b0000,0b0001,0b0001,0b0110
-    ; 107: k
-    db 0b1000,0b1010,0b1100,0b1010,0b1001,0b0000
-    ; 108: l
-    db 0b0110,0b0010,0b0010,0b0010,0b0111,0b0000
-    ; 109: m
-    db 0b0000,0b1110,0b1111,0b1001,0b1001,0b0000
-    ; 110: n
-    db 0b0000,0b1110,0b1001,0b1001,0b1001,0b0000
-    ; 111: o
-    db 0b0000,0b0110,0b1001,0b1001,0b0110,0b0000
-    ; 112: p
-    db 0b0000,0b1100,0b1010,0b1100,0b1000,0b1000
-    ; 113: q
-    db 0b0000,0b0110,0b1010,0b0110,0b0010,0b0010
-    ; 114: r
-    db 0b0000,0b1011,0b1100,0b1000,0b1000,0b0000
-    ; 115: s
-    db 0b0000,0b0111,0b0100,0b0010,0b0111,0b0000
-    ; 116: t
-    db 0b0100,0b1110,0b0100,0b0100,0b0011,0b0000
-    ; 117: u
-    db 0b0000,0b1001,0b1001,0b1001,0b0111,0b0000
-    ; 118: v
-    db 0b0000,0b1001,0b1001,0b0110,0b0100,0b0000
-    ; 119: w
-    db 0b0000,0b1001,0b1111,0b1111,0b0110,0b0000
-    ; 120: x
-    db 0b0000,0b1001,0b0110,0b0110,0b1001,0b0000
-    ; 121: y
-    db 0b0000,0b1001,0b0111,0b0001,0b0110,0b0000
-    ; 122: z
-    db 0b0000,0b1110,0b0010,0b0100,0b1110,0b0000
-    ; 123: {
-    db 0b0011,0b0010,0b1100,0b0010,0b0011,0b0000
-    ; 124: |
-    db 0b0010,0b0010,0b0010,0b0010,0b0010,0b0000
-    ; 125: }
-    db 0b1100,0b0100,0b0011,0b0100,0b1100,0b0000
-    ; 126: ~
-    db 0b0000,0b0101,0b1010,0b0000,0b0000,0b0000
-    ; 127: (DEL, blank)
-    db 0b1111,0b1111,0b1111,0b1111,0b1111,0b1111
