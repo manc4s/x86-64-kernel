@@ -3,8 +3,8 @@ entered: db "successfully entered the kernel shell.",0
 shell_line: db "kernel-shell-v3-$", 0
 
 
-x_offset: dw 0   ;current position
-y_offset: dw 0
+x_offset: dd 0   ;current position
+y_offset: dd 0
 row: dw 0
 cursor_offsetx: dw 0
 cursor_offsety: dw 0 
@@ -44,14 +44,6 @@ black: db 0x00
 
 
 
-
-
-;will retrieve ascii from page_data into here
-hovering_char: db 0
-;1 byte per character 64*33
-;2176 or 2174 needed for overflow
-page_data: times 2304 db 0      ;should be 2112 but for some reason maybe indexing something, needs 64 bytes so one extra row for safety
-page_data_end:
 
 
 
@@ -275,3 +267,14 @@ alphabet:
 input_buffer: times 1000 db 0
 input_buffer_end:
 input_size: dw 0
+
+
+
+;will retrieve ascii from page_data into here
+hovering_char: db 0
+;1 byte per character 64*33
+;2176 or 2174 needed for overflow
+page_data: times 2304 db 0      ;should be 2112 but for some reason maybe indexing something, needs 64 bytes so one extra row for safety
+page_data_end:
+
+
