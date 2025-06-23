@@ -11,12 +11,12 @@ Current implementation in protected mode x86.
 
 ---
 
-*Bootloader behaviour*<br>
+*Bootloader behaviour* <br>
 Bootloader, outputs Booting…(only shows if there’s an error in the kernel and jump doesn’t occur), then creates gdt, enables a20, disables interrupts and jumps to 0x10000 or 0x08 in the gdt for the code segment (gdt sectors defined below.) <br>
 
 ---
 
-*Current CLI(command line interface) features,(protected mode) after bootloader runs and then far jumping to 0x10000/0x08 in gdt*<br>
+*Current CLI(command line interface) features,(protected mode) after bootloader runs and then far jumping to 0x10000/0x08 in gdt* <br>
 &nbsp;&nbsp;-protected mode 32 bit, 1mb of space currently playing with, but up to 4GB available in protected mode. <br>
 &nbsp;&nbsp;-4x6 custom glyphs<br>
 &nbsp;&nbsp;-13-hour mode<br>
@@ -26,21 +26,28 @@ Bootloader, outputs Booting…(only shows if there’s an error in the kernel an
 
 ---
 
-*Current working keywords:*<br>
+*Current working keywords:* <br>
 new_file() <br>
 &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- if entered input buffer = new_file() opens up a empty file with no shell printing, no input buffer, just 2112 bytes to edit, however. Currently limited on 2112 bytes, will not take more input.<br>
 						
 ---
 
 
-**some video demonstrations of work and progress**<br>
+**some video demonstrations of work and progress** <br>
 
-**demonstration of working input buffer, June 17th, 2025**<br>
+**demonstration of working input buffer, June 17th, 2025** <br>
 
 
 https://github.com/user-attachments/assets/6167dc8e-5e9f-4bb4-b218-16c2c86f79e0
 
 **demonstrations of working protected mode + input buffer + keyword new_file(), June 23rd, 2025**<br>
+
+
+
+
+
+
+https://github.com/user-attachments/assets/d35160aa-4573-4d1a-8e0e-40bb78549c3f
 
 
 
