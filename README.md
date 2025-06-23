@@ -20,8 +20,9 @@ Current implementation in protected mode x86.
 &nbsp;&nbsp;-accepts input into input buffer, with cursor to edit input before entering.<br>
 &nbsp;&nbsp;-keywords for commands<br>
 
+---
 
-Current working keywords:
+*Current working keywords:*<br>
 new_file() <br>
 &nbsp;&nbsp; if entered input buffer = new_file() opens up a empty file with no shell printing, no input buffer, just 2112 bytes to edit, however. Currently limited on 2112 bytes, will not take more input.<br>
 						
