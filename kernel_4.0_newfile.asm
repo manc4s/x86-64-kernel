@@ -1,85 +1,54 @@
 ;;
 ;;
 ;;
-;;
-;; main label
-;;
+;;The Label that runs when keyword new_file() is run
 ;;
 ;;
 ;;
+;;What this file is going to be is saved by index page_number * 2304 for offset
+;;from 0xCFFFF in memory to 0xFFFFF is defined as a paging space.
 ;;
+;;
+;;
+;;Im going to make it so the last line is the name of the file,
+;;later will try to implement a   open_file(name) to open a file by the name in
+;;its first or last row of ascii saved in the 2304 bytes. 
 
 
-ORG 0x10000
 
 
-[bits 32]
-protected_start:
-    ;; Set up segments
-    ; Set up segment registers
-    mov ax, 0x10     ; data segment selector = index 2 * 8
-    mov ds, ax
-    mov fs, ax
-    mov gs, ax
 
-    mov ax, 0x18
-    mov ss, ax
 
-    mov esp, 0x101000    ;; Top of your stack segment
-
-    
-    ;track location where VRAM is for 13 hour mode
-    mov ax, 0x20
-    mov es, ax
-    
-
+new_file_main:
     call clear_screen
     call clear_page_data
-    
-    
-    ;entered kernel message
-    mov esi, entered
-    call print_string
-    call new_line
-    
-    
-    
-    
-    
-    jmp kernel
-
-    
-
-
-kernel:
-
-
-
-main:
-    mov esi, shell_line
-    call print_string
+    mov dword [cursor_offsetx], 0
+    mov dword [cursor_offsety], 0
+    mov dword [x_offset], 0
+    mov dword [y_offset], 0
+    mov dword [cursor_left], 0
+    mov dword [row], 0
     mov dword [input_size], 0
     
 
 
-.main_loop:
-
+.file_loop:
+    
     
     call toggle_cursor_color
     call draw_cursor
 
 
 
-
-
     in al, 0x64
     test al, 1
-    jz .main_loop
+    jz .file_loop
 
 
     in al, 0x60
     test al, 0x80
     jnz .key_release
+
 
 
     cmp al, 0x2A ;left shift
@@ -96,14 +65,13 @@ main:
     mov al, [scancode_to_ascii + ebx]
     jmp .next
 
-
 .use_shift_table:
     mov al, [scancode_to_ascii_left_shift + ebx]
     jmp .next
 
 .shift_press:
     mov byte [shift_pressed], 1    ; Set shift flag
-    jmp .main_loop                 ; Don't display anything
+    jmp .file_loop                 ; Don't display anything
     
 .key_release:
     and al, 0x7F        ; Remove the release bit
@@ -111,16 +79,17 @@ main:
     je .shift_release
     cmp al, 0x36        ; Right shift release
     je .shift_release
-    jmp .main_loop      ; Ignore other key releases
+    jmp .file_loop      ; Ignore other key releases
     
 .shift_release:
     mov byte [shift_pressed], 0    ; Clear shift flag
-    jmp .main_loop   
+    jmp .file_loop   
 
 
 
 
 .next:
+
 
     cmp byte ah, 0x1C  ; enter pressed
     je .enter_press
@@ -132,18 +101,78 @@ main:
     je .backspace
 
 
+    
+
+    ;;ESSENTIALLY BELOW IS THE LIMIT OF THE VALUE IM ENTERING
+    ;; THERE IS SPACE HERE TO HAVE A BACK PAGE NEXT PAGE PER new_file()
+    ;;ESSENTIALLY, IF x_offset equal or greater 312 and the text limit has
+    ;;touched the end of row. and then save_page and continue, then
+    ;; when shifting, just shift all the pages.
+    ;;although shift_left and shift_right are hardcoded so the only thing you need
+    ;; to do is pass variables for the label of a page instead.
+
+
     cmp dword [x_offset], 315
     jne .continue
     cmp dword [row], 32
     jne .continue
-    jmp .main_loop      ; at last char, don't allow more input
+    jmp .file_loop      ; at last char, don't allow more input
 
 
+    ;;have jge conditions above,
+    ;;then instead of jump .file_loop when at limits
+    ;;save page and then
+    ;jmp .continue
+
+    ;;then later implement something to shift every page on inputs
+    
 
 
+;handling enter press
+.enter_press:
+    
 
 
+    ;;dont allow enter past row limit cause itll go to next page and reset with new_line
+    cmp dword [row], 32 ; reset cursor left movement
+    je .file_loop
 
+
+    call draw_blank
+    call erase_cursor
+    call new_line
+
+
+    push eax
+    push edx
+    push ecx
+    mov eax, [x_offset]
+    mov edx, 0
+    mov ecx, 5
+    div ecx
+    mov dword [input_size], eax
+    mov eax, [y_offset]
+    mov edx, 0
+    mov ecx, 6
+    div ecx
+    imul eax, 64
+    add dword [input_size], eax
+    pop ecx
+    pop edx
+    pop eax
+
+
+    
+
+
+    mov dword [cursor_left], 0 ; reset cursor left movement
+    call cursor_to_text
+
+
+    jmp .file_loop
+
+
+    
 
 
 ;Hnadling input.
@@ -151,17 +180,6 @@ main:
 
     cmp dword [cursor_left], 0
     jne .continue2
-
-    cmp dword [input_size], 999    ;max byte input allowed.
-    jge .main_loop
-
-
-    push ebx
-    mov ebx, [input_size]
-    mov byte [input_buffer + ebx], al
-    mov byte [input_buffer + ebx + 1], 0  ;always zero terminated.
-    pop ebx
-   
     inc dword [input_size]
 
 
@@ -183,84 +201,17 @@ main:
 ;input if cursor_left>0 meaning that you are inputting wihting the string you entered already
 .continue2:
 
-    ;maks input string, even if you are entering when cursor_left>0.
-    cmp dword [input_size], 999
-    jge .main_loop
-
     ;temporarily fixes the bug that if the cursor is at the end of line but 
     ;cursor_left > 0 means that there is no wrapping for line shifts so you must just cut the input off at the end of line
     ;in the case cursor_left > 0 otherwise its fine to take input at that posiition.
     cmp dword [cursor_offsetx], 315
-    jge .main_loop
+    jge .file_loop
 
-
-    call shift_right
-
-
+    call shifter_right
 
 
 .continue3:
-
-    jmp .main_loop
-
-
-
-.random:
-    call clear_screen
-    jmp .hang
-
-
-
-;handling enter press
-.enter_press:
-    
-    call move_page_to_memory
-    call draw_blank
-    call erase_cursor
-    call new_line
-
-
-    mov dword [cursor_left], 0 ; reset cursor left movement
-    call cursor_to_text
-
-
-
-    cmp dword [input_size], 0
-    je main
-
-    ;call new_line
-    push esi
-    mov esi, input_buffer
-    call print_string
-    pop esi
-
-    call new_line
-        
-
-    
-    push esi
-    push edi
-    ;;can compare the input here after enter is pressed.    
-    mov esi, input_buffer
-    mov edi, keyword1
-    call compare_string3
-    pop esi
-    pop edi
-
-    ;if the input buffer equals the keyword selected
-    ;esi for input buffer
-    ;edi for other input
-    cmp eax, 1
-    je new_file_main
-    
-
-
-
-
-
-    jmp main
-
-
+    jmp .file_loop
 
 
 
@@ -273,28 +224,19 @@ main:
 
     ;size of input buffer is none, jump. to the top of taking inputs again
     cmp dword [input_size], 0
-    je .main_loop
+    je .file_loop
 
 
     ;sub buffer size by 1
     sub dword [input_size], 1
 
     
-
-
-    ;backspace needs to delete from the buffer, so the buffer most recent location will be turned to 0, the end   
-    push ebx
-    mov ebx, [input_size]
-    mov byte [input_buffer + ebx], 0
-    pop ebx
-    ;------------------------------------------------------------------------------------------
-
     ;call backspace for visually drawing
     ;call backspace
     call draw_blank_at_cursor
     call decrement_position
     call draw_blank_at_cursor
-    jmp .main_loop
+    jmp .file_loop
 
 
 
@@ -309,10 +251,10 @@ main:
     mov eax, [cursor_left]
     cmp dword [input_size], eax
     pop eax
-    je .main_loop
+    je .file_loop
 
     call shift_left
-    jmp .main_loop
+    jmp .file_loop
 
 
 
@@ -322,7 +264,7 @@ main:
 ;handling right arrow press for moving through input buffer.
 .rightarrow:
     call move_cursor_right
-    jmp .main_loop
+    jmp .file_loop
 
 
 
@@ -330,60 +272,10 @@ main:
 ;handling left arrow press for moving through input buffer.
 .leftarrow:
     call move_cursor_left
-    jmp .main_loop
-
+    jmp .file_loop
 
 
 
 .hang:
     jmp .hang
-
-
-
-
-
-
-
-
-
-
-
-
-
-%include "data_4.0.asm"
-%include "kernel_4.0_clearfunctions.asm"
-%include "kernel_4.0_drawtextfunctions.asm"
-%include "kernel_4.0_cursorfunctions.asm"
-%include "kernel_4.0_shiftingfunctions.asm"
-%include "kernel_4.0_stringfunctions.asm"
-%include "kernel_newfile.asm"
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

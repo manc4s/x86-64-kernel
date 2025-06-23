@@ -122,8 +122,8 @@ main:
 
     
     ; 13 hour mode, 
-    ;mov ax, 0x13
-    ;int 0x10
+    mov ax, 0x13
+    int 0x10
 
 
     
@@ -141,7 +141,7 @@ main:
     mov es, ax
     xor bx, bx
     mov ah, 0x02
-    mov al, 100
+    mov al, 128
     mov ch, 0
     mov cl, 2
     mov dh, 0
@@ -211,7 +211,6 @@ gdt_start:
     ;flat memory mode so code segment and data segment are both 1mb from 0x0 addresss.
 
 
-
     ;entry 1 code segment
     ;base address of code sector 0x00000 to 0xFFFFF
     ;1048575 byte code space. 1mb
@@ -223,7 +222,7 @@ gdt_start:
     db 01001111b         ; Flags
     db 0x00              ; Base high
 
-
+    ;0x10
     ; Entry 2: Data Segment 0x00000 to 0xfffff
     ;1mb space
     dw 0x1111            ; Limit low
@@ -233,7 +232,7 @@ gdt_start:
     db 01001111b         ; Flags
     db 0x00              ; Base high
 
-
+    ;0x18
     ;stack
     ;one 4096 byte area at 0x100000
     dw 0x1000       ; Limit low (4095 bytes)
@@ -243,6 +242,24 @@ gdt_start:
     db 01000000b    ; Flags
     db 0x00         ; Base high
 
+    ;;0x20
+    ;;defninf the video memory to write to.
+    dw 0xFFFF           ; Limit (64KB)
+    dw 0x0000           ; Base low (VGA memory at 0xA0000)
+    db 0x0A             ; Base middle
+    db 10010010b        ; Access: Present, Ring 0, Data, Writable
+    db 01001111b        ; Flags: 4KB granularity
+    db 0x00             ; Base high
+
+
+    ;;0x28
+    ;;from 0xCFFFF to 0xFFFFF space for pages of size 2112 (2304 until finding out why)
+    dw 0xFFFF           ; Limit 
+    dw 0xFFFF           ; Base low 
+    db 0x0C             ; Base middle
+    db 10010010b        ; Access:
+    db 01001111b        ; Flags: 
+    db 0x00             ; Base high
   
 gdt_end:
 
