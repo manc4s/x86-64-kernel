@@ -39,6 +39,7 @@ new_file() <br>
 https://github.com/user-attachments/assets/6167dc8e-5e9f-4bb4-b218-16c2c86f79e0
 
 **demonstrations of working protected mode + input buffer + keyword new_file(), June 23rd, 2025**<br>
+https://github.com/user-attachments/assets/c5890ddf-a1ee-4d4f-b229-ab4158821063
 
 
 
