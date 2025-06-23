@@ -33,7 +33,8 @@ new_file() <br>
 ---
 
 
-**some video demonstrations of work and progress**
+**some video demonstrations of work and progress**<br>
+
 **demonstration of working input buffer June 17th 2025**<br>
 https://github.com/user-attachments/assets/6167dc8e-5e9f-4bb4-b218-16c2c86f79e0
 
