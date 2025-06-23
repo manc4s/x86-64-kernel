@@ -28,19 +28,13 @@ Bootloader, outputs Booting…(only shows if there’s an error in the kernel an
 
 *Current working keywords:*<br>
 new_file() <br>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- if entered input buffer = new_file() opens up a empty file with no shell printing, no input buffer, just 2112 bytes to edit, however. Currently limited on 2112 bytes, will not &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;take more input.<br>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;- if entered input buffer = new_file() opens up a empty file with no shell printing, no input buffer, just 2112 bytes to edit, however. Currently limited on 2112 bytes, will not take more input.<br>
 						
-
-
-
 ---
 
 
-
+**some video demonstrations of work and progress**
 **demonstration of working input buffer June 17th 2025**<br>
-
-
-
 https://github.com/user-attachments/assets/6167dc8e-5e9f-4bb4-b218-16c2c86f79e0
 
 
