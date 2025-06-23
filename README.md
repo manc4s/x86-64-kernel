@@ -28,7 +28,7 @@ Bootloader, outputs Booting…(only shows if there’s an error in the kernel an
 
 *Current working keywords:*<br>
 new_file() <br>
-&nbsp;&nbsp; if entered input buffer = new_file() opens up a empty file with no shell printing, no input buffer, just 2112 bytes to edit, however. Currently limited on 2112 bytes, will not take more input.<br>
+&nbsp;&nbsp;&nbsp;;&nbsp;- if entered input buffer = new_file() opens up a empty file with no shell printing, no input buffer, just 2112 bytes to edit, however. Currently limited on 2112 bytes, will not take more input.<br>
 						
 
 
