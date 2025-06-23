@@ -11,8 +11,8 @@ Current implementation in protected mode x86.
 
 ---
 
-
-*Bootloader, outputs Booting…(only shows if there’s an error in the kernel and jump doesn’t occur), then creates gdt, enables a20, disables interrupts and jumps to 0x10000 or 0x08 in the gdt for the code segment (gdt sectors defined below.) * <br>
+*Bootloader behaviour*<br>
+Bootloader, outputs Booting…(only shows if there’s an error in the kernel and jump doesn’t occur), then creates gdt, enables a20, disables interrupts and jumps to 0x10000 or 0x08 in the gdt for the code segment (gdt sectors defined below.) <br>
 
 ---
 
