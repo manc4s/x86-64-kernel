@@ -9,7 +9,12 @@ This is where my code is for the kernel and bootloader.
 Current implementation in protected mode x86. 
 ---
 
-**Bootloader, outputs Booting…(only shows if there’s an error in the kernel and jump doesn’t occur), then creates gdt, enables a20, disables interrupts and jumps to 0x10000 or 0x08 in the gdt for the code segment (gdt sectors defined below.) ** <br>
+---
+
+
+*Bootloader, outputs Booting…(only shows if there’s an error in the kernel and jump doesn’t occur), then creates gdt, enables a20, disables interrupts and jumps to 0x10000 or 0x08 in the gdt for the code segment (gdt sectors defined below.) * <br>
+
+---
 
 *Current CLI(command line interface) features,(protected mode) after bootloader runs and then far jumping to 0x10000/0x08 in gdt*<br>
 
@@ -29,6 +34,7 @@ new_file() <br>
 
 
 
+---
 
 
 
