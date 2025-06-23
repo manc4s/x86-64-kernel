@@ -17,7 +17,6 @@ Bootloader, outputs Booting…(only shows if there’s an error in the kernel an
 ---
 
 *Current CLI(command line interface) features,(protected mode) after bootloader runs and then far jumping to 0x10000/0x08 in gdt*<br>
-
 &nbsp;&nbsp;-protected mode 32 bit, 1mb of space currently playing with, but up to 4GB available in protected mode. <br>
 &nbsp;&nbsp;-4x6 custom glyphs<br>
 &nbsp;&nbsp;-13-hour mode<br>
