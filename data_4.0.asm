@@ -5,9 +5,9 @@ shell_line: db "kernel-shell-v3-$", 0
 
 x_offset: dd 0   ;current position
 y_offset: dd 0
-row: dw 0
-cursor_offsetx: dw 0
-cursor_offsety: dw 0 
+row: dd 0
+cursor_offsetx: dd 0
+cursor_offsety: dd 0 
 
 
 
@@ -21,13 +21,31 @@ text_color: db 0x00  ;0f white
 
 cursor_bg: db 0x0f
 cursor_text: db 0x57
-cursor_counter: dw 0   ;the ticks
-cursor_left: dw 0
-cursor_right: dw 0
+cursor_counter: dd 0   ;the ticks
+cursor_left: dd 0
+cursor_right: dd 0
 
 
 cursor_bg_1: db 0x0f
 cursor_bg_2: db 0x57
+
+
+
+;for testing
+equal: db "equal", 0
+notqual: db"notequal", 0
+
+
+;testing_labels
+ea: db "entered assembler", 0
+
+
+
+
+
+
+
+
 
 
 
@@ -45,18 +63,65 @@ black: db 0x00
 
 
 
+keyword1: db "new_file", '(', ')', 0
+keyword1_length: dd $ - keyword1 -1
+
+keyword2: db "load_file", '(', ')', 0
+keyword2_length: dd $ - keyword2 -1
+load_file: dd 0  ;if loading file or not enable in new_file_main check
+
+
+keyword3: db "keywords", '(', ')', 0
+keyword3_length: dd $ - keyword3 -1
+
+keyword4: db "assembler_testing", '(', ')', 0
+keyword4_length: dd $ - keyword4 -1
+value_found: dd 0   ;looking for first non zero value, 1 when found
+
+
+
+;will retrieve ascii from page_data into here
+hovering_char: db 0
+;1 byte per character 64*33
+;2176 or 2174 needed for overflow
+page_data: times 2304 db 0      ;should be 2112 but for some reason maybe indexing something, needs 64 bytes so one extra row for safety
+page_data_end:
+
+
+
+saved_page: times 2304 db 0
+saved_page_end:
+saved_state: times 7 dd 0
 
 
 
 
+;page_number
+;will be the index from a specific address in memory to save pages to.
+;example all pages are at. 0xCFFFF + offset
+;offset = page_number * 2112 (2304 for now until patched)
+page_nunber: dd 0
+shift_pressed: dd 0 ;0 not pressed, 1 pressed
+cntrl_pressed: dd 0 ;0 not 1 yes
 
-test_counter: dw 0
+
+
+
+hex_to_ascii:  ;0x00 - 0x09 to ascii
+    db 48, 49, 50, 51, 52, 53, 54, 55, 56, 57
+
 scancode_to_ascii:
-    db 0, 0, '1', '2', '3', '4', '5', '6', '7', '8', '9', '0', '-', '=', 0, 0    ; 0x00-0x0F
-    db 'q', 'w', 'e', 'r', 't', 'y', 'u', 'i', 'o', 'p', 0x5b, 0x5d, 0, 0        ; 0x10-0x1F
-    db 'a', 's', 'd', 'f', 'g', 'h', 'j', 'k', 'l', 0x38, 0x27, 0, 0, 0          ; 0x20-0x2F
-    db 'z', 'x', 'c', 'v', 'b', 'n', 'm', ',', '.', '/', 0, 0, 0, ' '          ; 0x30-0x3F
+    db 0, 0, 49, 50, 51, 52, 53, 54, 55, 56, 57, 48, 45, 61, 8, 0           ; 0x00–0x0F
+    db 113, 119, 101, 114, 116, 121, 117, 105, 111, 112, 91, 93, 13, 0      ; 0x10–0x1F
+    db 97, 115, 100, 102, 103, 104, 106, 107, 108, 59, 39, 96, 92, 0        ; 0x20–0x2F
+    db 122, 120, 99, 118, 98, 110, 109, 44, 46, 47, 0, 42, 0, 32            ; 0x30–0x3F
 
+
+scancode_to_ascii_left_shift:
+    db 0, 0, 33, 64, 35, 36, 37, 94, 38, 42, 40, 41, 95, 43, 8, 0           ; 0x00–0x0F
+    db 81, 87, 69, 82, 84, 89, 85, 73, 79, 80, 123, 125, 13, 0              ; 0x10–0x1F
+    db 65, 83, 68, 70, 71, 72, 74, 75, 76, 58, 34, 126, 124, 0              ; 0x20–0x2F
+    db 90, 88, 67, 86, 66, 78, 77, 60, 62, 63, 0, 42, 0, 32                 ; 0x30–0x3F
 
 ;all chars 0-128, 4x6. 
 ;for 13h mode, custom 4x6 font
@@ -264,17 +329,9 @@ alphabet:
 
 
 ;make space of 128 bytes, be careful of this limit later when shifting the data
-input_buffer: times 1000 db 0
+input_buffer: times 2112 db 0
 input_buffer_end:
-input_size: dw 0
+input_size: dd 0
 
-
-
-;will retrieve ascii from page_data into here
-hovering_char: db 0
-;1 byte per character 64*33
-;2176 or 2174 needed for overflow
-page_data: times 2304 db 0      ;should be 2112 but for some reason maybe indexing something, needs 64 bytes so one extra row for safety
-page_data_end:
 
 
