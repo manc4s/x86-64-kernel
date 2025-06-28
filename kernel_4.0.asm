@@ -214,7 +214,7 @@ main:
 ;handling enter press
 .enter_press:
     
-    call move_page_to_memory
+    
     call draw_blank
     call erase_cursor
     call new_line
@@ -228,35 +228,104 @@ main:
     cmp dword [input_size], 0
     je main
 
-    ;call new_line
-    push esi
-    mov esi, input_buffer
-    call print_string
-    pop esi
-
-    call new_line
         
+    ;; KEYWORD COMPARISONS
 
-    
     push esi
     push edi
-    ;;can compare the input here after enter is pressed.    
+    ;compare input with keyword 1 
     mov esi, input_buffer
     mov edi, keyword1
     call compare_string3
     pop esi
     pop edi
 
-    ;if the input buffer equals the keyword selected
-    ;esi for input buffer
-    ;edi for other input
+    ;keyword 1 process if =keyword 1
     cmp eax, 1
     je new_file_main
+
+
+
+    push esi
+    push edi
+    ;compare with keyword 2
+    mov esi, input_buffer
+    mov edi, keyword2
+    call compare_string3 
+    pop esi
+    pop edi
+
+
+    ;keyword 2 process if =keyword 2
+    cmp eax, 1
+    jne .noloadfile
+    mov dword [load_file], 1
+    je new_file_main
+
+
+.noloadfile:
+
+    push esi
+    push edi
+    ;compare with keyword 3
+    mov esi, input_buffer
+    mov edi, keyword3
+    call compare_string3 
+    pop esi
+    pop edi
+    
+    cmp eax, 1
+    jne .keyword4
+    call keywords_list
+    jmp .skip_printing_output
+
+
+
+
+
+.keyword4:
+
+    push esi
+    push edi
+    ;compare with keyword 4
+    mov esi, input_buffer
+    mov edi, keyword4
+    call compare_string3 
+    pop esi
+    pop edi
+
+    cmp eax, 1
+    jne .nokeywords
+
+
+    ;call the assembler parse and create machine code
+    ;;from input_asm to output_machine_code
+    call myassembler
+
+
+    push esi
+    mov esi, output_machine_code 
+    call print_hex_as_decimal3
+    pop esi
+    call new_line
+
     
 
 
 
+.nokeywords:
 
+
+    
+    ;call new_line
+    push esi
+    mov esi, input_buffer
+    call print_string
+    pop esi
+    call new_line
+
+
+.skip_printing_output:
 
     jmp main
 
@@ -356,7 +425,10 @@ main:
 %include "kernel_4.0_cursorfunctions.asm"
 %include "kernel_4.0_shiftingfunctions.asm"
 %include "kernel_4.0_stringfunctions.asm"
-%include "kernel_newfile.asm"
+%include "kernel_4.0_newfile.asm"
+%include "kernel_4.0_keywords.asm"
+%include "kernel_4.0_printhex_to_decimal.asm"
+%include "kernel_4.0_assembler.asm"
 
 
 

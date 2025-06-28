@@ -39,13 +39,113 @@ notqual: db"notequal", 0
 ;testing_labels
 ea: db "entered assembler", 0
 
+epolo: db "errror",0
+
+;testing assembly
+input_asm:db "mov [eaxa], 0x1212 add this here",0
+;input_asm:db "mov eax, 0x821A ",0
+
+adding_to_machine_code_index: dd 0 ; index into output_machine_code location
+output_machine_code: times 2000 db 0
+
+
+;enable bytes
+opcode_recieved:
+    db 0        ;0 1 2, then reset. 
+
+immediate_value: ;true 1 false 0
+    db 0        ;if 1 use immediate_value table
+
+register_to_memory:  ; meaning second term has []
+    db 0        ;1 ,eams mov r/m, reg
+                ;0 means mov reg, r/m
+
+
+val_1_buffer:
+    times 10 db 0
+
+val_2_buffer:
+    times 10 db 0
+
+val_3_buffer:
+    times 10 db 0
+
+index_into_term_buffers:
+    dd 0
 
 
 
+hex_prefix:
+    db "0x", 0
 
 
+tables_indexes:
+    db "mov", 0
+    db "add", 0
+    db "sub", 0
+    db "cmp", 0
+
+; Opcode Table (Direction: reg←mem or mem←reg)
+opcode_table_r_rm:
+    db 0x8B    ; mov reg, r/m
+    db 0x03    ; add reg, r/m
+    db 0x2B    ; sub reg, r/m
+    db 0x3B    ; cmp reg, r/m
+
+opcode_table_rm_r:
+    db 0x89    ; mov r/m, reg
+    db 0x01    ; add r/m, reg
+    db 0x29    ; sub r/m, reg
+    db 0x39    ; cmp r/m, reg
+    
+
+immediate_value_table:
+    db 0xB8    ; mov eax, imm32
+    db 0x81   ;sub, cmp and add if there is an immediate value all have opcode 0x81
+    db 0x81
+    db 0x81
+    
+
+other_case_opcode: 
+    ;immediate address to rm.
+    ;is neither r/m, r
+    ;and not    r, r/m 
+    ;and not    r, imm32
+    ;this is the condition for r/m, imm32
+    db 0xC7
+    db 0x81   ;sub, cmp and add if there is an immediate value all have opcode 0x81
+    db 0x81
+    db 0x81
 
 
+;to index register_table
+register_names:
+    db "eax",0, 
+    db "ecx",0, 
+    db "edx",0,
+    db "ebx",0, 
+    db "esp",0, 
+    db "ebp",0, 
+    db "esi",0, 
+    db "edi",0
+
+; Register Table
+register_table:
+    db 000b    ; eax
+    db 001b    ; ecx
+    db 010b    ; edx
+    db 011b    ; ebx
+    db 100b    ; esp
+    db 101b    ; ebp
+    db 110b    ; esi
+    db 111b    ; edi
+
+; Mod Table (2 bits)
+mod_table:
+    db 00b     ; [reg]
+    db 01b     ; [reg + disp8]
+    db 10b     ; [reg + disp32]
+    db 11b     ; reg
 
 
 
@@ -332,6 +432,5 @@ alphabet:
 input_buffer: times 2112 db 0
 input_buffer_end:
 input_size: dd 0
-
 
 

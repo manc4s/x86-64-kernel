@@ -26,7 +26,7 @@ print_hex_as_decimal:
 
 .divide_ten_multiplier:
     
-    mov eax, esi
+    mov eax, [esi]
     mov edx, 0
     div ebx
     push edx
@@ -84,6 +84,173 @@ print_hex_as_decimal:
 .end:
 
     mov dword [value_found], 0 ;reset for next time its called
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+
+
+
+
+
+
+print_hex_as_decimal2:
+
+    push eax
+    push ebx
+    push ecx
+    push edx
+    push esi
+
+    mov ebx, 1
+    mov ecx, 9     ; Start with 10^9
+.10exponent:
+    imul ebx, 10
+    loop .10exponent
+
+.divide_ten_multiplier:
+
+    movzx eax, byte [esi]    ; Load value to convert
+    mov edx, 0
+    div ebx           ; eax = quotient, edx = remainder
+    push edx          ; Save remainder
+    push ebx          ; Save divisor
+
+    cmp eax, 10       ; Ensure valid index into hex_to_ascii
+    jl .valid_digit
+    mov al, '?'       ; Fallback character for invalid index
+    jmp .skip_ascii
+.valid_digit:
+    mov al, [hex_to_ascii + eax]
+.skip_ascii:
+
+    cmp dword [value_found], 0
+    je .check
+
+    call print_char
+    call next_char
+    jmp .continue
+
+.check:
+    cmp al, 48        ; Is it '0'?
+    je .continue
+
+    mov dword [value_found], 1
+    call print_char
+    call next_char
+
+.continue:
+    pop ebx           ; Restore divisor
+    pop edx           ; Restore remainder
+
+    cmp ebx, 1
+    je .not_another_loop
+
+    mov eax, ebx
+    mov edx, 0
+    mov ecx, 10
+    div ecx
+    mov ebx, eax
+
+    jmp .divide_ten_multiplier
+
+.not_another_loop:
+    cmp dword [value_found], 0
+    jne .end
+
+    mov al, [hex_to_ascii]
+    call print_char
+    call next_char
+
+.end:
+    mov dword [value_found], 0
+    pop esi
+    pop edx
+    pop ecx
+    pop ebx
+    pop eax
+    ret
+
+
+
+
+
+
+;;prints only a byte long hex at a position, change size if you want larger
+;;
+print_hex_as_decimal3:
+
+    push eax
+    push ebx
+    push ecx
+    push edx
+    push esi
+    movzx eax, byte [esi]
+    push eax
+
+    mov ebx, 1
+    mov ecx, 9     ; Start with 10^9
+.10exponent:
+    imul ebx, 10
+    loop .10exponent
+
+.divide_ten_multiplier:
+
+    movzx eax, byte [esi]
+    mov edx, 0
+    div ebx               ; eax = digit, edx = remainder
+    mov [esi], edx        ; update value for next digit extraction
+
+    cmp eax, 10
+    jl .valid_digit
+    mov al, '?'           ; fallback if out of bounds
+    jmp .skip_ascii
+.valid_digit:
+    mov al, [hex_to_ascii + eax]
+.skip_ascii:
+
+    cmp dword [value_found], 0
+    je .check
+
+    call print_char
+    call next_char
+    jmp .continue
+
+.check:
+    cmp al, 48            ; is '0'
+    je .continue
+
+    mov dword [value_found], 1
+    call print_char
+    call next_char
+
+.continue:
+    cmp ebx, 1
+    je .not_another_loop
+
+    mov eax, ebx
+    mov edx, 0
+    mov ecx, 10
+    div ecx
+    mov ebx, eax
+
+    jmp .divide_ten_multiplier
+
+.not_another_loop:
+    cmp dword [value_found], 0
+    jne .end
+
+    mov al, [hex_to_ascii]
+    call print_char
+    call next_char
+
+.end:
+    mov dword [value_found], 0
+    
+    pop eax
+    mov [esi], al
     pop esi
     pop edx
     pop ecx

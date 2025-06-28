@@ -1,6 +1,9 @@
 
-
-
+;;
+;;Callable runtime assembler for x86 assembly 32 bit extended protected mode
+;;
+;;
+;;
 
 
 
@@ -17,5 +20,417 @@ myassembler:
     call new_line
 
 
-    ret
     
+
+
+
+myassemblercontinued:
+
+    push esi
+    push edi
+    ; Input setup
+    mov esi, input_asm        ; ESI = start of input buffer
+    call print_string
+    call new_line
+    mov esi, output_machine_code ; EDI = where we write machine code
+    call print_string
+    call new_line
+
+
+
+    ; setup input and output.
+    mov esi, input_asm
+
+    call parser
+
+
+
+    pop edi
+    pop esi
+    ret
+
+
+
+
+
+
+parser:
+    push ecx
+    push esi
+    push eax
+
+
+.parser_loop:
+
+    mov byte al, [esi]
+
+
+    cmp al, 0
+    je .parser_loop_end
+
+
+    cmp al, ' '
+    jne .not_space
+
+    inc byte [opcode_recieved]
+    mov dword [index_into_term_buffers], 0
+
+    jmp .skip
+
+.not_space:
+
+
+    cmp byte [opcode_recieved], 1
+    je .check_register_to_memory
+
+
+
+    cmp byte [opcode_recieved], 2
+    je .check_immediate_value
+
+    jmp .continue
+
+
+.check_register_to_memory:
+    cmp al, '['
+    je .register_to_memory
+
+    cmp al, ']'
+    je .register_to_memory
+
+    cmp al, ','
+    je .skip
+
+
+    
+    
+    
+
+
+.check_immediate_value:
+    
+    ;cmp byte [immediate_value], 1
+    ;je .continue
+
+    push esi
+    push edi
+    push eax
+
+    mov esi, val_3_buffer
+    mov edi, hex_prefix
+    call compare_string3
+    mov ebx, eax   ;save eax into ebx
+    pop eax
+    pop edi
+    pop esi
+
+    cmp ebx, 1
+    je .immediate_found
+
+
+
+
+.continue:
+
+    ;call print_char
+    ;call next_char
+    ;call new_line
+
+    mov ebx, [index_into_term_buffers]
+    
+    ;;currently the largest instruction possible is 4 bytes of data
+    ;;so 0xXXXXXXXX, max size 8 for the buffers that are ssize 10 rn
+    ;;only set up for imm32
+    cmp ebx, 7   ;size larger than 8 its definitely too large for input buffer instructions in x86
+    ja .error
+    
+    
+    cmp byte [opcode_recieved], 0
+    je .val1_buffer
+
+    cmp byte [opcode_recieved], 1
+    je .val2_buffer
+
+    cmp byte [opcode_recieved], 2
+    je .val3_buffer
+
+    jmp .skip
+
+
+    
+.val1_buffer:
+    mov byte [val_1_buffer + ebx], al
+    jmp .end_of_buffers
+.val2_buffer:
+    mov byte [val_2_buffer + ebx], al
+    jmp .end_of_buffers
+.val3_buffer:
+    mov byte [val_3_buffer + ebx], al
+
+.end_of_buffers:
+
+    inc dword [index_into_term_buffers]
+    jmp .skip
+
+
+
+
+
+
+.register_to_memory:
+    mov byte [register_to_memory], 1
+    jmp .skip
+
+.immediate_found:
+    mov byte [immediate_value], 1
+    mov dword [index_into_term_buffers], 0 ;reset 3rd term buffer to ignore 0x part
+    jmp .continue
+
+
+.skip:
+
+    inc esi
+   
+
+    ;compare the opcode_recieved with 2.
+    ;while its 2 it should keep going, once 3 its at the end of first instruction
+    cmp byte [opcode_recieved], 3
+    je .convert
+    ;call convert_instruction_to_machine_code
+
+    jmp .parser_loop
+
+.convert:
+
+
+
+    ;;here instead of parser loop end, convert the instruction
+    ;;with current 3 buffers,
+    ;;process them with convert_instruction_to_machine_code
+    ;;reset all buffers, index, and enables
+    ;;get next instruction by jumping to top of parser_loop
+    ;;for now will just 
+
+    call convert_instruction_to_machine_code
+
+
+
+    ;mov byte [opcode_recieved], 0
+    ;mov byte [immediate_value], 0
+    ;mov byte [register_to_memory], 0
+    ;mov dword [index_into_term_buffers], 0
+    ; Reset all flags and buffers
+    mov byte [opcode_recieved], 0
+    mov byte [immediate_value], 0
+    mov byte [register_to_memory], 0
+    mov dword [index_into_term_buffers], 0
+
+    mov ecx, 10
+    mov edi, val_1_buffer
+    .clear_v1:
+        mov byte [edi], 0
+        inc edi
+        loop .clear_v1
+
+    mov ecx, 10
+    mov edi, val_2_buffer
+    .clear_v2:
+        mov byte [edi], 0
+        inc edi
+        loop .clear_v2
+
+    mov ecx, 10
+    mov edi, val_3_buffer
+    .clear_v3:
+        mov byte [edi], 0
+        inc edi
+        loop .clear_v3
+    
+    jmp .parser_loop
+
+
+
+.parser_loop_end:
+    call convert_instruction_to_machine_code
+    jmp .end
+
+.error:
+     ;error
+    push esi
+    mov esi, epolo
+    call print_string
+    pop esi
+    call new_line
+
+
+.end:
+    pop eax
+    pop esi
+    pop ecx
+    ret
+
+
+
+
+
+
+
+convert_instruction_to_machine_code:
+    
+    
+    
+    push esi
+    mov esi, val_1_buffer
+    call print_string
+    pop esi
+    call new_line
+    push esi
+    mov esi, val_2_buffer
+    call print_string
+    pop esi
+    call new_line
+    push esi
+    mov esi, val_3_buffer
+    call print_string
+    pop esi
+    call new_line
+
+
+    push eax
+    push esi
+    push edi
+    push ebx
+    push ecx
+
+    ;start with first term check.
+    mov ebx, 0
+.value_1_loop:
+
+    push esi
+    mov esi, val_1_buffer
+    call print_string
+    pop esi
+
+
+   
+
+    mov esi, val_1_buffer
+    
+    push ebx
+    imul ebx, 4  ;cause each entry in table indexes is 32 bits 'mov', 0
+    mov edi, tables_indexes
+    add edi, ebx
+    pop ebx
+
+    ;mov esi, edi
+    ;call print_string
+
+    ;bl i changed in here
+    push ebx
+    call compare_string3
+    pop ebx
+
+    cmp eax, 1
+    je .table_index_found
+    jmp .index_not_found
+
+
+.index_not_found:
+    inc ebx
+
+    
+    cmp ebx, 3
+    ja .opcode_not_found
+    jmp .value_1_loop
+
+
+.table_index_found:
+
+    ;imul ebx, 4
+    ;ebx contains the index into mov, add, sub, cmp table to identify which one
+    
+
+    cmp byte [immediate_value], 1      ;r/m , imm32
+    jne .no_immediate
+    cmp byte [register_to_memory], 1   ;r/m , r
+    je .other_case
+
+    ;immediate value to register   r, imm32
+    mov eax, [adding_to_machine_code_index]
+    mov byte cl, [immediate_value_table + ebx]  ;read the byte of machine code
+    mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
+    jmp .skip
+
+
+;;no immediate value found, check if r/m, r
+.no_immediate:
+
+    cmp byte [register_to_memory], 1   ;r/m , r
+    jne .continue
+    mov eax, [adding_to_machine_code_index]
+    mov byte cl, [opcode_table_rm_r + ebx]  ;read the byte of machine code
+    mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
+    jmp .skip
+
+;rm, imm32 case
+.other_case:
+
+    mov eax, [adding_to_machine_code_index]
+    mov byte cl, [other_case_opcode + ebx]  ;read the byte of machine code
+    mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
+    jmp .skip
+
+;;normal case, reg, reg or r, r/m
+.continue:
+    ;ebx contains index into opcode table
+    mov eax, [adding_to_machine_code_index]
+    mov byte cl, [opcode_table_r_rm + ebx]  ;read the byte of machine code
+    mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
+
+
+
+.skip:
+    
+    
+    mov ebx, [adding_to_machine_code_index]
+    call new_line
+
+    push esi
+    mov esi, output_machine_code 
+    add esi, ebx
+    call print_hex_as_decimal3
+    pop esi
+    call new_line
+   
+
+    push esi
+    mov esi, ea
+    call print_string
+    pop esi
+    call new_line
+
+
+    ;; increment position in the output_machine_code
+    inc dword [adding_to_machine_code_index]
+
+    jmp .end
+
+
+.opcode_not_found:
+
+    ;error
+    push esi
+    mov esi, epolo
+    call print_string
+    pop esi
+    call new_line
+
+
+.end:
+
+    pop ecx
+    pop ebx
+    pop edi
+    pop esi
+    pop eax
+    ret
