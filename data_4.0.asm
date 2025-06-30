@@ -49,10 +49,10 @@ value_2_error: db "errror term 2",0
 value_3_error: db "errror term 3",0
 error_term_large: db "error some term too large. make sure hex passed is 32 bit or operand must be corrected.",0
 seperator: db "--------------------------------------------------------------",0
-
+error2found: db "two memory locations."
 
 ;testing assembly
-input_asm:db "move [eaxaawa], 0x1212 addd this here",0
+input_asm:db "mov edi, ebx add eax, [edx]",0
 ;input_asm:db "mov [eaxa]",0
 ;input_asm:db "mov eax, 0x821A ",0
 
@@ -75,6 +75,9 @@ immediate_value: ;true 1 false 0
 register_to_memory:  ; meaning second term has []
     db 0        ;1 ,eams mov r/m, reg
                 ;0 means mov reg, r/m
+
+register_to_memory2:
+    db 0
 
 
 val_1_buffer:
@@ -156,13 +159,8 @@ register_table:
     db 110b    ; esi
     db 111b    ; edi
 
-; Mod Table (2 bits)
-mod_table:
-    db 00b     ; [reg]
-    db 01b     ; [reg + disp8]
-    db 10b     ; [reg + disp32]
-    db 11b     ; reg
-
+r_m_index: dd 0
+r_index: dd 0
 
 
 

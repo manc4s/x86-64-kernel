@@ -40,7 +40,7 @@ myassemblercontinued:
     ;;seperator for testing output + visual clarity, delete later
     mov esi, seperator    
     call print_string
-    call new_line
+    call new_line                                                                                                                                                                                                                                               
 
 
 
@@ -101,9 +101,11 @@ parser:
 .check_register_to_memory:
     cmp al, '['
     je .register_to_memory
+    ;je .skip
 
     cmp al, ']'
     je .register_to_memory
+    ;je .skip
 
     cmp al, ','
     je .skip
@@ -118,6 +120,13 @@ parser:
     
     ;cmp byte [immediate_value], 1
     ;je .continue
+
+
+    cmp al, '['
+    je .register_to_memory2
+
+    cmp al, ']'
+    je .register_to_memory2
 
     push esi
     push edi
@@ -188,6 +197,10 @@ parser:
     mov byte [register_to_memory], 1
     jmp .skip
 
+.register_to_memory2:
+    mov byte [register_to_memory2], 1
+    jmp .skip
+
 .immediate_found:
     mov byte [immediate_value], 1
     mov dword [index_into_term_buffers], 0 ;reset 3rd term buffer to ignore 0x part
@@ -230,6 +243,7 @@ parser:
     mov byte [opcode_recieved], 0
     mov byte [immediate_value], 0
     mov byte [register_to_memory], 0
+    mov byte [register_to_memory2], 0
     mov dword [index_into_term_buffers], 0
 
     mov ecx, 10
@@ -288,7 +302,26 @@ parser:
 
 convert_instruction_to_machine_code:
     
+    push esi
+    mov esi, register_to_memory
+    call print_hex_as_decimal3
+    pop esi
+    call next_char   
+
     
+    push esi
+    mov esi, register_to_memory2
+    call print_hex_as_decimal3
+    pop esi
+    call next_char   
+
+    push esi
+    mov esi, immediate_value
+    call print_hex_as_decimal3
+    pop esi
+    call next_char   
+
+    ;;test output
     push esi
     mov esi, instruction_message
     call print_string
@@ -324,6 +357,16 @@ convert_instruction_to_machine_code:
     push ebx
     push ecx
 
+
+
+    movzx ebx, byte [register_to_memory2]
+    cmp ebx, 1
+    jne .nodoublebrackets
+    movzx eax, byte [register_to_memory]
+    cmp ebx, eax
+    je .twomemoryfound
+
+.nodoublebrackets:
     ;start with first term check.
     mov ebx, 0
 .value_1_loop:
@@ -387,10 +430,12 @@ convert_instruction_to_machine_code:
 ;;no immediate value found, check if r/m, r
 .no_immediate:
 
-    cmp byte [register_to_memory], 1   ;r/m , r
+    cmp byte [register_to_memory2], 1   ;r/m , r
     jne .continue
+
+    ;;normal r to r/m case
     mov eax, [adding_to_machine_code_index]
-    mov byte cl, [opcode_table_rm_r + ebx]  ;read the byte of machine code
+    mov byte cl, [opcode_table_r_rm + ebx]  ;read the byte of machine code
     mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
     jmp .value1_processing_end
 
@@ -402,32 +447,227 @@ convert_instruction_to_machine_code:
     mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
     jmp .value1_processing_end
 
-;;normal case, reg, reg or r, r/m
+;;rm to r case
 .continue:
     ;ebx contains index into opcode table
     mov eax, [adding_to_machine_code_index]
-    mov byte cl, [opcode_table_r_rm + ebx]  ;read the byte of machine code
+    mov byte cl, [opcode_table_rm_r + ebx]  ;read the byte of machine code
     mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
 
 
 
 .value1_processing_end:
     
-    
-    ;mov ebx, [adding_to_machine_code_index]
-    ;call new_line
-    ;push esi
-    ;mov esi, output_machine_code 
-    ;add esi, ebx
-    ;call print_hex_as_decimal3
-    ;pop esi
-    ;call new_line
-    ;push esi
-    ;mov esi, ea
-    ;call print_string
-    ;pop esi
-    ;call new_line
+    ;; increment position in the output_machine_code
+    inc dword [adding_to_machine_code_index]
 
+
+
+
+
+    ;;FIND THE REST OF THE OUTPUT MACHINE CODE WITH THE TERM 2 AND 3 TO CREATE TEH RM BYTE
+
+    ;;newline for testing
+    call new_line
+    mov ebx, 0
+.value_2_loop:
+
+    push esi
+    mov esi, val_2_buffer
+    call print_string
+    pop esi
+
+    mov esi, val_2_buffer
+    
+    push ebx
+    imul ebx, 4  ;cause each entry in table indexes is 32 bits 'mov', 0
+    mov edi, register_names
+    add edi, ebx
+    pop ebx
+
+    ;mov esi, edi
+    ;call print_string
+
+    ;bl i changed in here
+    push ebx
+    call compare_string3
+    pop ebx
+
+    cmp eax, 1
+    je .register_index_found
+    jmp .register_index_not_found
+
+
+.register_index_not_found:
+    inc ebx
+
+    
+    cmp ebx, 7     ;;8 values in regiister names
+    ja .value_2_opcode_error
+    jmp .value_2_loop
+
+
+
+.register_index_found:
+    
+    ;;keep track of r index fo modrm byte
+    mov [r_index], ebx
+
+
+
+
+;;newline for testing
+    call new_line
+    mov ebx, 0
+.value_3_loop:
+
+    push esi
+    mov esi, val_3_buffer
+    call print_string
+    pop esi
+
+    mov esi, val_3_buffer
+    
+    push ebx
+    imul ebx, 4  ;cause each entry in table indexes is 32 bits 'mov', 0
+    mov edi, register_names
+    add edi, ebx
+    pop ebx
+
+    ;mov esi, edi
+    ;call print_string
+
+    ;bl i changed in here
+    push ebx
+    call compare_string3
+    pop ebx
+
+    cmp eax, 1
+    je .register_index_found2
+    jmp .register_index_not_found2
+
+
+.register_index_not_found2:
+    inc ebx
+
+    
+    cmp ebx, 7     ;;8 values in regiister names
+    ja .value_3_opcode_error
+    jmp .value_3_loop
+
+
+
+.register_index_found2:
+    
+    ;;keep track of r index fo modrm byte
+    mov [r_m_index], ebx
+
+
+    push esi
+    mov esi, register_to_memory
+    call print_hex_as_decimal3
+    pop esi
+    call next_char   
+
+    
+    push esi
+    mov esi, register_to_memory2
+    call print_hex_as_decimal3
+    pop esi
+    call next_char   
+
+    push esi
+    mov esi, immediate_value
+    call print_hex_as_decimal3
+    pop esi
+    call next_char   
+
+
+    ;;ch is the mod RM byte
+    mov cl, 00000000b
+
+
+.create_modRM_byte:
+
+    cmp byte [immediate_value], 1      ;r/m , imm32
+    jne .no_immediate2
+    cmp byte [register_to_memory], 1   ;r/m , r
+    je .other_case2
+
+
+    ;;THIS CASE IS DIFFERENT FOR IM32 CHANGE WHEN U CAN INTERPRET HEX VALUES
+    ;;
+    ;;case im32 to register mod bits are 11
+    or cl, 00000011b
+    shl cl, 3
+    mov ebx, [r_m_index]
+    or cl, [register_table + ebx] ;;r/m byte
+    shl cl, 3
+    mov ebx, [r_index]
+    or cl, [register_table + ebx]
+    jmp .modrmbyte_processing_end
+
+;;no immediate value found, check if r/m, r
+.no_immediate2:
+
+    cmp byte [register_to_memory2], 1  
+    jne .continue2
+
+
+    ;;r, rm
+    ;;memory to register
+    ;;register goes first then rm
+    shl cl, 3
+    mov ebx, [r_index]
+    or cl, [register_table + ebx] ;;r/m byte
+    shl cl, 3
+    mov ebx, [r_m_index]
+    or cl, [register_table + ebx]
+    jmp .modrmbyte_processing_end
+
+
+
+;;im 32 case
+;rm, imm32 case
+.other_case2:   
+
+    ;;immediate value to register or memory have another case here for register to register
+    shl cl, 3
+    ;;register cl doesnt need to be or'd mod bits are 00
+    ;;cl is the same here
+    mov ebx, [r_m_index]
+    or cl, [register_table + ebx] ;;r/m byte
+    shl cl, 3
+    mov ebx, [r_index]
+    or cl, [register_table + ebx]
+    jmp .modrmbyte_processing_end
+
+
+
+
+;;register to register?
+;;memory or register to register
+;;rm to r
+.continue2:
+
+    ;;register to register??
+    or cl, 00000011b
+    shl cl, 3
+    mov ebx, [r_m_index]
+    or cl, [register_table + ebx] ;;r/m byte
+    shl cl, 3
+    mov ebx, [r_index]
+    or cl, [register_table + ebx]
+
+
+
+  
+
+
+.modrmbyte_processing_end:
+    
+    mov eax, [adding_to_machine_code_index]
+    mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
 
     ;; increment position in the output_machine_code
     inc dword [adding_to_machine_code_index]
@@ -439,24 +679,8 @@ convert_instruction_to_machine_code:
 
 
 
-
-
-.value_2_loop:
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    ;;newline for testing
+    call new_line
 
 
     jmp .end
@@ -470,7 +694,42 @@ convert_instruction_to_machine_code:
     call print_string
     pop esi
     call new_line
+    jmp .end
+
+
+
+.value_2_opcode_error:
+
+    ;error
+    push esi
+    mov esi, value_2_error
+    call print_string
+    pop esi
+    call new_line
+    jmp .end
+
+
+.value_3_opcode_error:
+
+    ;error
+    push esi
+    mov esi, value_3_error
+    call print_string
+    pop esi
+    call new_line
+    jmp .end
+
+
+.twomemoryfound:
     
+    ;error
+    push esi
+    mov esi, error2found
+    call print_string
+    pop esi
+    call new_line
+    jmp .end
+
 
 
 .end:

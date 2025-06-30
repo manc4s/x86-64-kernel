@@ -327,27 +327,26 @@ main:
 
 
 
-
-    push esi
-    mov esi, output_machine_code + 1
-    call print_hex_as_decimal3
-    pop esi
-    call next_char
-
+    ;;print the first 10 hex at output_machine_code as decimal seperated by spaces.
+    push ecx
+    mov ecx, 0
+.test_assembler_output_loop:
 
     push esi
     mov esi, output_machine_code
+    add esi, ecx
     call print_hex_as_decimal3
     pop esi
-    call new_line
+    call next_char   
 
-    
+    inc ecx
+    cmp ecx, 10
+    jl .test_assembler_output_loop
+    pop ecx
 
-  
 
 
-    
-
+    jmp .skip_printing_output
 
 
 .nokeywords:
