@@ -561,28 +561,7 @@ convert_instruction_to_machine_code:
     
     ;;keep track of r index fo modrm byte
     mov [r_m_index], ebx
-
-
-    push esi
-    mov esi, register_to_memory
-    call print_hex_as_decimal3
-    pop esi
-    call next_char   
-
-    
-    push esi
-    mov esi, register_to_memory2
-    call print_hex_as_decimal3
-    pop esi
-    call next_char   
-
-    push esi
-    mov esi, immediate_value
-    call print_hex_as_decimal3
-    pop esi
-    call next_char   
-
-
+   
     ;;ch is the mod RM byte
     mov cl, 00000000b
 

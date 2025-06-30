@@ -345,8 +345,36 @@ main:
     pop ecx
 
 
+    call new_line
+    push ecx
+    mov ecx, 0
+.test_assembler_output_loop2:
+    push esi
+    mov esi, output_machine_code
+    add esi, ecx
+    push eax
+    mov al, [esi]
+    call printhexbyte
+    pop eax
+    pop esi
+    call next_char   
+
+    inc ecx
+    cmp ecx, 10
+    jl .test_assembler_output_loop2
+    pop ecx
+
+
+
+
+    push eax
+    mov al, [testvalue]
+    call printhexbyte
+    pop eax
+
 
     jmp .skip_printing_output
+
 
 
 .nokeywords:
@@ -472,6 +500,7 @@ main:
 %include "kernel_4.0_keywords.asm"
 %include "kernel_4.0_printhex_to_decimal.asm"
 %include "kernel_4.0_assembler.asm"
+%include "kernel_4.0_printhexbyte.asm"
 
 
 
