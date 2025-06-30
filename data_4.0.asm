@@ -31,6 +31,10 @@ cursor_bg_2: db 0x57
 
 
 
+;;for testing the print hex as decimal. i have one for dd and one for db
+;;but i address one with [testvalue] for dword size and the other with testvalue_2 for byte sized
+testvalue: dd 0x66
+testvalue_2: db 0x66
 ;for testing
 equal: db "equal", 0
 notqual: db"notequal", 0
@@ -38,12 +42,18 @@ notqual: db"notequal", 0
 
 ;testing_labels
 ea: db "entered assembler", 0
+instruction_message: db "instruction being processed - ", 0
 
-epolo: db "errror",0
+value_1_error: db "errror term 1",0
+value_2_error: db "errror term 2",0
+value_3_error: db "errror term 3",0
+error_term_large: db "error some term too large. make sure hex passed is 32 bit or operand must be corrected.",0
+seperator: db "--------------------------------------------------------------",0
+
 
 ;testing assembly
-;input_asm:db "mov [eaxa], 0x1212 add this here",0
-input_asm:db "mov [eaxa]",0
+input_asm:db "move [eaxaawa], 0x1212 addd this here",0
+;input_asm:db "mov [eaxa]",0
 ;input_asm:db "mov eax, 0x821A ",0
 
 adding_to_machine_code_index: dd 0 ; index into output_machine_code location

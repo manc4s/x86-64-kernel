@@ -313,6 +313,15 @@ main:
 
     ;call the assembler parse and create machine code
     ;;from input_asm to output_machine_code
+
+    push esi
+    mov esi, [testvalue]
+    call print_hex_as_decimal
+    mov esi, testvalue_2
+    call print_hex_as_decimal3
+    pop esi
+    call new_line
+
     call myassembler
 
 

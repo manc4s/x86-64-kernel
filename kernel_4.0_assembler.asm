@@ -37,6 +37,13 @@ myassemblercontinued:
     call new_line
 
 
+    ;;seperator for testing output + visual clarity, delete later
+    mov esi, seperator    
+    call print_string
+    call new_line
+
+
+
 
     ; setup input and output.
     mov esi, input_asm
@@ -246,8 +253,12 @@ parser:
         inc edi
         loop .clear_v3
     
+    
+    ;;jmp .parser_loop for all instructions 1 by 1
+    ;;jmp end to limit to one instruction ending at zero.
+    ;;jmp end might be better, looping through my file, passing one line at a time might be best.
     jmp .parser_loop
-
+    ;jmp .end
 
 
 .parser_loop_end:
@@ -257,7 +268,7 @@ parser:
 .error:
      ;error
     push esi
-    mov esi, epolo
+    mov esi, error_term_large
     call print_string
     pop esi
     call new_line
@@ -278,23 +289,34 @@ parser:
 convert_instruction_to_machine_code:
     
     
-    
+    push esi
+    mov esi, instruction_message
+    call print_string
+    pop esi
     push esi
     mov esi, val_1_buffer
     call print_string
     pop esi
-    call new_line
+    push eax
+    mov al, ','
+    call print_char
+    call next_char
+    pop eax
     push esi
     mov esi, val_2_buffer
     call print_string
     pop esi
-    call new_line
+    push eax
+    mov al, ','
+    call print_char
+    call next_char
+    pop eax
     push esi
     mov esi, val_3_buffer
     call print_string
     pop esi
     call new_line
-
+    call new_line
 
     push eax
     push esi
@@ -340,7 +362,7 @@ convert_instruction_to_machine_code:
 
     
     cmp ebx, 3
-    ja .opcode_not_found
+    ja .value_1_opcode_error
     jmp .value_1_loop
 
 
@@ -359,7 +381,7 @@ convert_instruction_to_machine_code:
     mov eax, [adding_to_machine_code_index]
     mov byte cl, [immediate_value_table + ebx]  ;read the byte of machine code
     mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
-    jmp .skip
+    jmp .value1_processing_end
 
 
 ;;no immediate value found, check if r/m, r
@@ -370,7 +392,7 @@ convert_instruction_to_machine_code:
     mov eax, [adding_to_machine_code_index]
     mov byte cl, [opcode_table_rm_r + ebx]  ;read the byte of machine code
     mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
-    jmp .skip
+    jmp .value1_processing_end
 
 ;rm, imm32 case
 .other_case:
@@ -378,7 +400,7 @@ convert_instruction_to_machine_code:
     mov eax, [adding_to_machine_code_index]
     mov byte cl, [other_case_opcode + ebx]  ;read the byte of machine code
     mov byte [output_machine_code + eax], cl  ;write the byte of mahcine code
-    jmp .skip
+    jmp .value1_processing_end
 
 ;;normal case, reg, reg or r, r/m
 .continue:
@@ -389,44 +411,74 @@ convert_instruction_to_machine_code:
 
 
 
-.skip:
+.value1_processing_end:
     
     
-    mov ebx, [adding_to_machine_code_index]
-    call new_line
-
-    push esi
-    mov esi, output_machine_code 
-    add esi, ebx
-    call print_hex_as_decimal3
-    pop esi
-    call new_line
-   
-
-    push esi
-    mov esi, ea
-    call print_string
-    pop esi
-    call new_line
+    ;mov ebx, [adding_to_machine_code_index]
+    ;call new_line
+    ;push esi
+    ;mov esi, output_machine_code 
+    ;add esi, ebx
+    ;call print_hex_as_decimal3
+    ;pop esi
+    ;call new_line
+    ;push esi
+    ;mov esi, ea
+    ;call print_string
+    ;pop esi
+    ;call new_line
 
 
     ;; increment position in the output_machine_code
     inc dword [adding_to_machine_code_index]
 
+
+
+
+
+
+
+
+
+
+.value_2_loop:
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
     jmp .end
 
 
-.opcode_not_found:
+.value_1_opcode_error:
 
     ;error
     push esi
-    mov esi, epolo
+    mov esi, value_1_error
     call print_string
     pop esi
     call new_line
+    
 
 
 .end:
+    push esi
+    mov esi, seperator
+    call print_string
+    pop esi
+    call new_line
 
     pop ecx
     pop ebx
