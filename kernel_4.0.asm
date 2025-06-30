@@ -255,13 +255,26 @@ main:
     pop esi
     pop edi
 
-
     ;keyword 2 process if =keyword 2
     cmp eax, 1
     jne .noloadfile
+
+    cmp dword [file_detected], 1
+    jne .nofilecreated
+
     mov dword [load_file], 1
     je new_file_main
 
+
+
+.nofilecreated:
+    ;;print error message if there was no new_file() created but tried to load_file()
+    push esi
+    mov esi, error_file_not_detected
+    call print_string
+    pop esi
+    call new_line
+    jmp .skip_printing_output
 
 .noloadfile:
 
@@ -303,11 +316,26 @@ main:
     call myassembler
 
 
+
+
+
     push esi
-    mov esi, output_machine_code 
+    mov esi, output_machine_code + 1
+    call print_hex_as_decimal3
+    pop esi
+    call next_char
+
+
+    push esi
+    mov esi, output_machine_code
     call print_hex_as_decimal3
     pop esi
     call new_line
+
+    
+
+  
+
 
     
 
@@ -323,6 +351,13 @@ main:
     call print_string
     pop esi
     call new_line
+
+
+
+
+
+
+
 
 
 .skip_printing_output:

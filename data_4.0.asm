@@ -42,11 +42,17 @@ ea: db "entered assembler", 0
 epolo: db "errror",0
 
 ;testing assembly
-input_asm:db "mov [eaxa], 0x1212 add this here",0
+;input_asm:db "mov [eaxa], 0x1212 add this here",0
+input_asm:db "mov [eaxa]",0
 ;input_asm:db "mov eax, 0x821A ",0
 
 adding_to_machine_code_index: dd 0 ; index into output_machine_code location
 output_machine_code: times 2000 db 0
+
+
+
+hex_to_decimal_3_helper: dd 0
+
 
 
 ;enable bytes
@@ -189,6 +195,8 @@ page_data_end:
 
 
 
+file_detected: dd 0    ;;when 1 means a file was created
+error_file_not_detected: db "A file was not created. Use new_file() to create one.", 0
 saved_page: times 2304 db 0
 saved_page_end:
 saved_state: times 7 dd 0

@@ -26,7 +26,7 @@ print_hex_as_decimal:
 
 .divide_ten_multiplier:
     
-    mov eax, [esi]
+    mov eax, esi
     mov edx, 0
     div ebx
     push edx
@@ -179,7 +179,7 @@ print_hex_as_decimal2:
 
 
 ;;prints only a byte long hex at a position, change size if you want larger
-;;
+;; hex_to_decimal_3_helper is used so that [esi] is never changed but still keeps the ease of updating the hex 
 print_hex_as_decimal3:
 
     push eax
@@ -187,8 +187,14 @@ print_hex_as_decimal3:
     push ecx
     push edx
     push esi
+    ;movzx eax, byte [esi]
+    ;push eax
+    ;movzx eax, byte [esi+1]
+    ;push eax
+
     movzx eax, byte [esi]
-    push eax
+    ;;hextodecimal3 helper so that i can edit [esi] without affecting the label i want to print out
+    mov [hex_to_decimal_3_helper], eax
 
     mov ebx, 1
     mov ecx, 9     ; Start with 10^9
@@ -198,10 +204,10 @@ print_hex_as_decimal3:
 
 .divide_ten_multiplier:
 
-    movzx eax, byte [esi]
+    movzx eax, byte [hex_to_decimal_3_helper]
     mov edx, 0
     div ebx               ; eax = digit, edx = remainder
-    mov [esi], edx        ; update value for next digit extraction
+    mov [hex_to_decimal_3_helper], edx        ; update value for next digit extraction
 
     cmp eax, 10
     jl .valid_digit
@@ -249,8 +255,10 @@ print_hex_as_decimal3:
 .end:
     mov dword [value_found], 0
     
-    pop eax
-    mov [esi], al
+    ;pop eax
+    ;mov [esi + 1], al
+    ;pop eax
+    ;mov [esi], al
     pop esi
     pop edx
     pop ecx
