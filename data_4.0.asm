@@ -54,6 +54,7 @@ instruction_message: db "instruction being processed - ", 0
 value_1_error: db "errror term 1",0
 value_2_error: db "errror term 2",0
 value_3_error: db "errror term 3",0
+invalid_heximm32: db "invalid hex im32 passed",0
 error_term_large: db "error some term too large. make sure hex passed is 32 bit or operand must be corrected.",0
 seperator: db "--------------------------------------------------------------",0
 error2found: db "two memory locations.",0
@@ -61,7 +62,7 @@ error2found: db "two memory locations.",0
 ;testing assembly
 ;input_asm:db "mov edi, ebx add eax, [edx] mov eax, ebx",0
 ;input_asm:db "mov [edawdwi], ebx add [eax], [edx] sub eax, ebx cmp edi, [0x898989], mov 0x1283, [eax] cmp edx, [ebx] mov [eax], 0x123912",0
-input_asm: db "mov [eawx], 0x123912 mov eax, 0x123123",0
+input_asm: db "mov [eax],  0x123912 mov esi, 0x89 add [ebx], 0x123123 sub [edx], 0x123123 cmp [edi], 0x123123",0
 
 ;input_asm:db "mov [eaxa]",0
 ;input_asm:db "mov eax, 0x821A ",0
@@ -70,8 +71,15 @@ adding_to_machine_code_index: dd 0 ; index into output_machine_code location
 output_machine_code: times 2000 db 0
 
 
-
+;;used int hex to decimal 3 in kernel4.0_printhex_to_decimals
 hex_to_decimal_3_helper: dd 0
+
+
+;;for immediate values i need to keep track of if i need to appedn another dword afterward. if so then the hex passed 
+;;in imm32 case will be appended from hex created
+;; this is an enable, either 1 do it or 0 dont
+write_the_imm32:
+    db 0
 
 
 
@@ -176,6 +184,7 @@ register_table:
 ;;indexes into both tables for term 2 & 3
 r_m_index: dd 0
 r_index: dd 0
+opcode_index: dd 0
 
 
 

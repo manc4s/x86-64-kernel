@@ -361,7 +361,7 @@ main:
     call next_char   
 
     inc ecx
-    cmp ecx, 15
+    cmp ecx, 30
     jl .test_assembler_output_loop2
     pop ecx
 

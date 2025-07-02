@@ -240,6 +240,9 @@ parser:
     mov byte [register_to_memory], 0
     mov byte [register_to_memory2], 0
     mov dword [index_into_term_buffers], 0
+    mov byte [error_found], 0
+    mov byte [write_the_imm32], 0
+
 
     mov ecx, 10
     mov edi, val_1_buffer
@@ -456,7 +459,7 @@ convert_instruction_to_machine_code:
     
     ;; increment position in the output_machine_code
     inc dword [adding_to_machine_code_index]
-
+    mov [opcode_index], ebx
 
 
 
@@ -513,24 +516,33 @@ convert_instruction_to_machine_code:
 
 
 
+
+
+
+    ;;check if immediate value
+    ;;check if its valid.
+
+    cmp byte [immediate_value], 1
+    jne .nohexconversionneeded
+
+    
     push esi
     mov esi, val_3_buffer
     call stringtohex
-    ;mov esi, equal
-    ;call print_string
     pop esi
     cmp byte [error_converting], 0
-    jne .dontprinthex
+    jne .invalid_heximm32
     
     push esi
     mov esi, [hex_created]
     call print_hex_as_decimal
     pop esi
 
-.dontprinthex:
+    jmp .skip_value_3_loop
 
 
 
+.nohexconversionneeded:
 ;;newline for testing
     ;call new_line
     mov ebx, 0
@@ -577,10 +589,12 @@ convert_instruction_to_machine_code:
     ;;keep track of r index fo modrm byte
     mov [r_m_index], ebx
    
+
+
+.skip_value_3_loop:
+
     ;;ch is the mod RM byte
     mov cl, 00000000b
-
-
 .create_modRM_byte:
 
     cmp byte [immediate_value], 1      ;r/m , imm32
@@ -589,17 +603,59 @@ convert_instruction_to_machine_code:
     je .other_case2
 
 
+    cmp dword [opcode_index], 0
+    je .movingimm32_to_register_case
     ;;THIS CASE IS DIFFERENT FOR IM32 CHANGE WHEN U CAN INTERPRET HEX VALUES
     ;;
     ;;case im32 to register mod bits are 11
     or cl, 00000011b
     shl cl, 3
-    mov ebx, [r_m_index]
-    or cl, [register_table + ebx] ;;r/m byte
+
+    ;;reg bit 000 - add
+    ;;reg bit 101 - sub
+    ;;reg bit 111 - cmp
+    cmp dword [opcode_index], 1
+    jne .checksub
+    or cl, 00000000b
+    jmp .donechecks
+.checksub:
+    cmp dword [opcode_index], 2
+    jne .isacmp
+    or cl, 00000101b
+    jmp .donechecks
+
+.isacmp:
+    or cl, 00000111b
+
+
+.donechecks:
     shl cl, 3
     mov ebx, [r_index]
     or cl, [register_table + ebx]
+    
+    ;;need to write dword from hex created to machine code
+    mov byte [write_the_imm32], 1    
     jmp .modrmbyte_processing_end
+
+
+
+.movingimm32_to_register_case:
+    ;;mov imm32 into register case is handled here
+    ;;add sub and cmp use rm byte handle above
+
+    dec dword [adding_to_machine_code_index]
+
+    mov eax, [adding_to_machine_code_index]
+    mov byte cl, [output_machine_code + eax]  ;read the byte to edit it
+
+    mov ebx, [r_index]
+    mov bl, [register_table + ebx]
+    add cl, bl
+    mov byte [write_the_imm32], 1
+    jmp .modrmbyte_processing_end
+
+
+
 
 ;;no immediate value found, check if r/m, r
 .no_immediate2:
@@ -629,11 +685,42 @@ convert_instruction_to_machine_code:
     shl cl, 3
     ;;register cl doesnt need to be or'd mod bits are 00
     ;;cl is the same here
+    cmp dword [opcode_index], 0
+    je .donechecks2
+    ;;THIS CASE IS DIFFERENT FOR IM32 CHANGE WHEN U CAN INTERPRET HEX VALUES
+    ;;
+    ;;case im32 to register mod bits are 11
+    or cl, 00000000b
+    shl cl, 3
+
+    ;;reg bit 000 - add
+    ;;reg bit 101 - sub
+    ;;reg bit 111 - cmp
+    cmp dword [opcode_index], 1
+    jne .checksub
+    or cl, 00000000b
+    jmp .notamov
+.checksub2:
+    cmp dword [opcode_index], 2
+    jne .isacmp
+    or cl, 00000101b
+    jmp .notamov
+
+.isacmp2:
+    or cl, 00000111b
+
+
+.donechecks2:
     mov ebx, [r_m_index]
     or cl, [register_table + ebx] ;;r/m byte
+
+.notamov:
     shl cl, 3
     mov ebx, [r_index]
     or cl, [register_table + ebx]
+
+    ;;need to write dword from hex created to machine code
+    mov byte [write_the_imm32], 1    
     jmp .modrmbyte_processing_end
 
 
@@ -668,11 +755,17 @@ convert_instruction_to_machine_code:
 
 
 
+    cmp byte [write_the_imm32], 1
+    jne .noimm32towrite
 
+    ;;write the dword and incremenet position by 4 because its a dword being put into 
+    ;;output_machine_code
+    inc dword eax
+    mov dword ebx, [hex_created]
+    mov dword [output_machine_code + eax], ebx 
+    add dword [adding_to_machine_code_index], 4
 
-
-
-
+.noimm32towrite:
     ;;newline for testing
     ;call new_line
 
@@ -723,6 +816,18 @@ convert_instruction_to_machine_code:
     pop esi
     call new_line
     jmp .end
+
+
+.invalid_heximm32:
+
+    ;error
+    push esi
+    mov esi, invalid_heximm32
+    call print_string
+    pop esi
+    call new_line
+    jmp .error_end
+
 
 
 .error_end:
