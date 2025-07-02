@@ -32,11 +32,6 @@ myassemblercontinued:
     mov esi, input_asm        ; ESI = start of input buffer
     call print_string
     call new_line
-    mov esi, output_machine_code ; EDI = where we write machine code
-    call print_string
-    call new_line
-
-
     ;;seperator for testing output + visual clarity, delete later
     mov esi, seperator    
     call print_string
@@ -302,6 +297,7 @@ parser:
 
 convert_instruction_to_machine_code:
     
+    ;call new_line
     push esi
     mov esi, register_to_memory
     call print_hex_as_decimal3
@@ -349,7 +345,7 @@ convert_instruction_to_machine_code:
     call print_string
     pop esi
     call new_line
-    call new_line
+    ;call new_line
 
     push eax
     push esi
@@ -371,10 +367,10 @@ convert_instruction_to_machine_code:
     mov ebx, 0
 .value_1_loop:
 
-    push esi
-    mov esi, val_1_buffer
-    call print_string
-    pop esi
+    ;push esi
+    ;mov esi, val_1_buffer
+    ;call print_string
+    ;pop esi
 
 
    
@@ -468,14 +464,14 @@ convert_instruction_to_machine_code:
     ;;FIND THE REST OF THE OUTPUT MACHINE CODE WITH THE TERM 2 AND 3 TO CREATE TEH RM BYTE
 
     ;;newline for testing
-    call new_line
+    ;call new_line
     mov ebx, 0
 .value_2_loop:
 
-    push esi
-    mov esi, val_2_buffer
-    call print_string
-    pop esi
+    ;push esi
+    ;mov esi, val_2_buffer
+    ;call print_string
+    ;pop esi
 
     mov esi, val_2_buffer
     
@@ -516,15 +512,34 @@ convert_instruction_to_machine_code:
 
 
 
-;;newline for testing
-    call new_line
-    mov ebx, 0
-.value_3_loop:
 
     push esi
     mov esi, val_3_buffer
-    call print_string
+    call stringtohex
+    ;mov esi, equal
+    ;call print_string
     pop esi
+    cmp byte [error_converting], 0
+    jne .dontprinthex
+    
+    push esi
+    mov esi, [hex_created]
+    call print_hex_as_decimal
+    pop esi
+
+.dontprinthex:
+
+
+
+;;newline for testing
+    ;call new_line
+    mov ebx, 0
+.value_3_loop:
+
+    ;push esi
+    ;mov esi, val_3_buffer
+    ;call print_string
+    ;pop esi
 
     mov esi, val_3_buffer
     
@@ -659,7 +674,7 @@ convert_instruction_to_machine_code:
 
 
     ;;newline for testing
-    call new_line
+    ;call new_line
 
 
     jmp .end
@@ -673,7 +688,7 @@ convert_instruction_to_machine_code:
     call print_string
     pop esi
     call new_line
-    jmp .end
+    jmp .error_end
 
 
 
@@ -685,7 +700,7 @@ convert_instruction_to_machine_code:
     call print_string
     pop esi
     call new_line
-    jmp .end
+    jmp .error_end
 
 
 .value_3_opcode_error:
@@ -696,7 +711,7 @@ convert_instruction_to_machine_code:
     call print_string
     pop esi
     call new_line
-    jmp .end
+    jmp .error_end
 
 
 .twomemoryfound:
@@ -710,6 +725,16 @@ convert_instruction_to_machine_code:
     jmp .end
 
 
+.error_end:
+    
+
+    dec dword [adding_to_machine_code_index]
+    mov eax, [adding_to_machine_code_index]
+    mov byte [output_machine_code + eax ], 0  ;write the byte of mahcine code
+    ;mov byte [output_machine_code], 0  ;write the byte of mahcine code
+
+    ;; increment position in the output_machine_code
+    
 
 .end:
     push esi

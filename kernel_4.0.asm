@@ -314,13 +314,14 @@ main:
     ;call the assembler parse and create machine code
     ;;from input_asm to output_machine_code
 
-    push esi
-    mov esi, [testvalue]
-    call print_hex_as_decimal
-    mov esi, testvalue_2
-    call print_hex_as_decimal3
-    pop esi
-    call new_line
+    ;;testing printhexasdecimal and printhexasdecimal3
+    ;push esi
+    ;mov esi, [testvalue]
+    ;call print_hex_as_decimal
+    ;mov esi, testvalue_2
+    ;;call print_hex_as_decimal3
+    ;pop esi
+    ;call new_line
 
     call myassembler
 
@@ -340,7 +341,7 @@ main:
     call next_char   
 
     inc ecx
-    cmp ecx, 10
+    cmp ecx, 30
     jl .test_assembler_output_loop
     pop ecx
 
@@ -360,18 +361,11 @@ main:
     call next_char   
 
     inc ecx
-    cmp ecx, 10
+    cmp ecx, 15
     jl .test_assembler_output_loop2
     pop ecx
 
-
-
-
-    push eax
-    mov al, [testvalue]
-    call printhexbyte
-    pop eax
-
+    call new_line
 
     jmp .skip_printing_output
 
@@ -501,6 +495,8 @@ main:
 %include "kernel_4.0_printhex_to_decimal.asm"
 %include "kernel_4.0_assembler.asm"
 %include "kernel_4.0_printhexbyte.asm"
+%include "kernel_4.0_stringtohex.asm"
+
 
 
 
