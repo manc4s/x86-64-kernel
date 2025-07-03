@@ -24,8 +24,8 @@ clear_screen:
 
     mov edi, 0                ; Start at offset 0 (row 0)
     mov ecx, 320*200              ; 320 pixels in the first row
-    mov al, [bg_color]    ;selected bg color in data, byte long        ; Color 00011100 (28),
-
+    mov al, [bg_revert]    ;selected bg color in data, byte long        ; Color 00011100 (28),
+                        ;;revert because if printall_colours is called, bg_colour may be different
 
 .fill_row:
     mov [es:edi], al
@@ -84,17 +84,17 @@ end:
 
 move_page_to_memory:
 
-    push esi
-    push edi
+    push esi ;move from label
+    push edi ;move to label
     push ecx
     push es
 
     mov ax, ds           ; Set ES = DS (your data segment)
     mov es, ax
 
-    cld                             ; clear direction flag
-    mov esi, page_data              ; source
-    mov edi, saved_page             ; destination
+    cld            
+    mov esi, page_data
+    mov edi, saved_page                 ; clear direction flag
     mov ecx, 2304
     rep movsb                       ; copy ECX bytes from [ESI] to [EDI]
 

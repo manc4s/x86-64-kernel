@@ -62,7 +62,7 @@ error2found: db "two memory locations.",0
 ;testing assembly
 ;input_asm:db "mov edi, ebx add eax, [edx] mov eax, ebx",0
 ;input_asm:db "mov [edawdwi], ebx add [eax], [edx] sub eax, ebx cmp edi, [0x898989], mov 0x1283, [eax] cmp edx, [ebx] mov [eax], 0x123912",0
-input_asm: db "mov [eax],  0x123912 mov esi, 0x89 add [ebx], 0x123123 sub [edx], 0x123123 cmp [edi], 0x123123",0
+input_asm: db "mov [eax], 0x123912 mov esi, 0x89 add [ebx], 0x123123 sub [edx], 0x123123 cmp [edi], 0x123123",0
 
 ;input_asm:db "mov [eaxa]",0
 ;input_asm:db "mov eax, 0x821A ",0
@@ -215,6 +215,14 @@ keyword3_length: dd $ - keyword3 -1
 keyword4: db "assembler_testing", '(', ')', 0
 keyword4_length: dd $ - keyword4 -1
 value_found: dd 0   ;looking for first non zero value, 1 when found
+
+keyword5: db "printall_colours", '(', ')', 0
+hex_byte_to_colour_to_screen: db 0x00
+keyword5_length: dd $ - keyword5 -1
+keyword6: db "set_bg_color", 0
+keyword7: db "set_text_color", 0
+
+
 
 
 

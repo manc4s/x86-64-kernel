@@ -210,7 +210,8 @@ main:
     jmp .hang
 
 
-
+;;at this point the input buffer is whatevers bing input with zero termination if all
+;;was successful
 ;handling enter press
 .enter_press:
     
@@ -228,6 +229,15 @@ main:
     cmp dword [input_size], 0
     je main
 
+    ;;mov eax, 0
+    call check_print_colour_keywords
+    ;keyword 1 process if =keyword 1
+    cmp eax, 1
+    jne .not_colour_keyword
+    call printall_colours
+    jmp .skip_printing_output
+
+.not_colour_keyword:
         
     ;; KEYWORD COMPARISONS
 
@@ -291,9 +301,6 @@ main:
     jne .keyword4
     call keywords_list
     jmp .skip_printing_output
-
-
-
 
 
 .keyword4:
@@ -496,6 +503,7 @@ main:
 %include "kernel_4.0_assembler.asm"
 %include "kernel_4.0_printhexbyte.asm"
 %include "kernel_4.0_stringtohex.asm"
+%include "kernel_4.0_colours.asm"
 
 
 
