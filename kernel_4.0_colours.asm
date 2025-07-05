@@ -37,7 +37,8 @@ check_print_colour_keywords:
     jne .not_printall_colours_keyword
     call printall_colours
     call new_line
-    ja .return
+   
+    jmp .return
 
 .not_printall_colours_keyword:
 
@@ -197,16 +198,15 @@ printall_colours:
     mov al, [hex_byte_to_colour_to_screen]
     mov bl, al
 
-    mov esi, hex_byte_to_colour_to_screen
-    call print_hex_as_decimal3
-
-    mov al, '.'
-    call print_char
-    call next_char
+    ;mov esi, hex_byte_to_colour_to_screen
+    ;call print_hex_as_decimal3
 
     mov al, bl
-    call draw_selected_colour
-
+    call printhexbyte   ;print out the hex for the colour
+    call draw_selected_colour    ;print out a glyph of purely the colour
+    mov al, ','
+    call print_char
+    call next_char
 
     inc byte [hex_byte_to_colour_to_screen]
     cmp bl, 254
@@ -232,7 +232,7 @@ draw_selected_colour:
     
     mov al, 32  ;blank space
     call print_char
-    call next_char
+    ;call next_char
     call next_char
     
 
