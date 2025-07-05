@@ -42,6 +42,14 @@ check_print_colour_keywords:
     call colour_parser
     pop esi
 
+    ;; compare both parts of the input buffer after parsing
+    ;; val 1 and val 2 buffers contain, val 1 - keyword, either set_bg or set_text
+    ;; and then val 2 has 0x12389123 total 8 digits for 32 bits excluding the 0x, larger will be ignored
+    ;; conver the hex from val_2, if it converts successfully, compare to 255
+    ;; if equal to 255 or less, then change that to the bg_colour, bg_rever or text_colour text_revert
+    
+
+    ;; CHECK PARSED INPUTS HERE
     push esi
     mov esi, val_1_buffer
     call print_string
@@ -50,6 +58,52 @@ check_print_colour_keywords:
     call print_string
     call new_line
     pop esi
+
+
+    push esi
+    push edi
+    mov esi, val_1_buffer
+    mov edi, keyword6
+    call compare_string3
+    pop edi
+    pop esi
+
+    cmp eax, 1
+    jne .notkeyword6
+
+
+    ;;
+    ;;HERE means it matched keyword 6 'set_bg',0
+    jmp .return
+
+
+.notkeyword6:
+
+
+    push esi
+    push edi
+    mov esi, val_1_buffer
+    mov edi, keyword7
+    call compare_string3
+    pop edi
+    pop esi
+
+    cmp eax, 1
+    jne .notkeyword7
+
+    ;;value 1 buffer matches 'set_text',0
+    ;;
+
+    jmp .return
+
+.notkeyword7:
+
+
+
+    ;;was neither keyword if here
+    ;;when flipping back will look to see if 1 or zero if zero will continue looking
+    mov eax, 0
+
 
 
 .return:
