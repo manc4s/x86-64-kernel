@@ -29,8 +29,8 @@ myassemblercontinued:
     push esi
     push edi
     ; Input setup
-    ;;mov esi, input_asm        ; ESI = start of input buffer
-    mov esi, saved_page + 2
+    mov esi, input_asm        ; ESI = start of input buffer
+    ;;mov esi, saved_page + 2
     
     call print_string
     call new_line
@@ -43,7 +43,11 @@ myassemblercontinued:
 
 
     ; setup input and output.
-    mov esi, saved_page + 2
+    ;;mov esi, saved_page + 2
+    mov esi, input_asm
+
+
+    call clear_value_buffers
 
     call parser
 
@@ -272,8 +276,8 @@ parser:
     ;;jmp .parser_loop for all instructions 1 by 1
     ;;jmp end to limit to one instruction ending at zero.
     ;;jmp end might be better, looping through my file, passing one line at a time might be best.
-    ;sjmp .parser_loop
-    jmp .end
+    jmp .parser_loop
+    ;jmp .end
 
 
 .parser_loop_end:
@@ -858,3 +862,44 @@ convert_instruction_to_machine_code:
     pop esi
     pop eax
     ret
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+clear_value_buffers:
+    
+    mov ecx, 10
+    mov edi, val_1_buffer
+    .clear_v1:
+        mov byte [edi], 0
+        inc edi
+        loop .clear_v1
+
+    mov ecx, 10
+    mov edi, val_2_buffer
+    .clear_v2:
+        mov byte [edi], 0
+        inc edi
+        loop .clear_v2
+
+    mov ecx, 10
+    mov edi, val_3_buffer
+    .clear_v3:
+        mov byte [edi], 0
+        inc edi
+        loop .clear_v3

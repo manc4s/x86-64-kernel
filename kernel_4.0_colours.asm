@@ -31,10 +31,15 @@ check_print_colour_keywords:
     pop esi
     pop edi
 
+
+
     cmp eax, 1
-    je .return
+    jne .not_printall_colours_keyword
+    call printall_colours
+    call new_line
+    ja .return
 
-
+.not_printall_colours_keyword:
 
 
     push esi
@@ -50,14 +55,14 @@ check_print_colour_keywords:
     
 
     ;; CHECK PARSED INPUTS HERE
-    push esi
-    mov esi, val_1_buffer
-    call print_string
-    call new_line
-    mov esi, val_2_buffer
-    call print_string
-    call new_line
-    pop esi
+    ;push esi
+    ;mov esi, val_1_buffer
+    ;call print_string
+    ;call new_line
+    ;mov esi, val_2_buffer
+    ;call print_string
+    ;call new_line
+    ;pop esi
 
 
     push esi
@@ -74,7 +79,37 @@ check_print_colour_keywords:
 
     ;;
     ;;HERE means it matched keyword 6 'set_bg',0
+    push esi
+    mov esi, val_2_buffer
+    call stringtohex
+    pop esi
+
+
+    ;; error converting the hex value passed if 1
+    cmp byte [error_converting], 0
+    jne .invalid_hex
+
+
+    cmp dword [hex_created], 255
+    ja .invalid_hex
+
+
+    mov eax, [hex_created]
+    ;;al now contains the valid hex_created byte
+
+    call set_the_background
+
+    mov eax, 1
     jmp .return
+
+.invalid_hex:
+    ;;the hex passed in the val_2_buffer was invalid or too large
+
+    push esi
+    mov esi, error_hexval_notvalid
+    call print_string
+    pop esi
+    call new_line
 
 
 .notkeyword6:
@@ -92,9 +127,41 @@ check_print_colour_keywords:
     jne .notkeyword7
 
     ;;value 1 buffer matches 'set_text',0
+    
     ;;
+    ;;HERE means it matched keyword 6 'set_bg',0
+    push esi
+    mov esi, val_2_buffer
+    call stringtohex
+    pop esi
 
+
+    ;; error converting the hex value passed if 1
+    cmp byte [error_converting], 0
+    jne .invalid_hex2
+
+
+    cmp dword [hex_created], 255
+    ja .invalid_hex2
+
+
+    mov eax, [hex_created]
+    ;;al now contains the valid hex_created byte
+
+    call set_the_text
+
+    mov eax, 1
     jmp .return
+
+.invalid_hex2:
+    ;;the hex passed in the val_2_buffer was invalid or too large
+
+    push esi
+    mov esi, error_hexval_notvalid
+    call print_string
+    pop esi
+    call new_line
+
 
 .notkeyword7:
 
@@ -378,4 +445,47 @@ colour_parser:
     pop ebx
     pop esi
     pop ecx
+    ret
+
+
+
+
+
+
+
+
+
+
+;;value to set should be in al
+set_the_background:
+
+    mov byte [bg_revert], al
+    mov byte [bg_color], al
+
+
+
+    call clear_screen
+    mov dword [x_offset], 0
+    mov dword [y_offset], 0
+    mov dword [row], 0
+    mov dword [cursor_offsetx], 0
+    mov dword [cursor_offsety], 0
+    call clear_page_data
+
+    ret
+
+
+
+
+
+
+;;value to set should be in al
+set_the_text:
+
+    mov byte [text_revert], al
+    mov byte [text_color], al
+
+    ;;call clear_screen
+
+
     ret

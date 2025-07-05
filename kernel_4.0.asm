@@ -234,8 +234,6 @@ main:
     ;keyword 1 process if =keyword 1
     cmp eax, 1
     jne .not_colour_keyword
-    call printall_colours
-    call new_line
 
     jmp .skip_printing_output
 
