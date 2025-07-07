@@ -27,10 +27,10 @@ LBA129_write_coloursaves:
     mov esi, LBA129_savedata      ;the 512 data relating to colour to save
 
 
-    
+    mov dx, 0x1f7
     ;;STEP 1 for ATA
 .waitforBUSYbit:
-    in al, 0x1F7        ;;Status byte
+    in al, dx       ;;Status byte
     test al, 0x80       ;;check the 7th bit if its 1 or zero goes into z register flag 0x80 - 10000000b
 
     jnz .waitforBUSYbit  ;BSY 0 or 1. if zero not busy
@@ -116,4 +116,78 @@ LBA129_write_coloursaves:
     pop esi
     pop eax
 
+    ret
+
+
+
+
+
+
+
+
+
+
+LBA129_read_coloursaves:
+    push eax
+    push esi
+    push edx
+    push ecx
+
+    mov esi, LBA129_savedata
+
+    ;;1 BSY bit
+    mov dx, 0x1f7
+.wait_busy:
+    in al, dx
+    test al, 0x80
+    jnz .wait_busy
+
+
+    ;; 2 NUMBER OF SECTORS
+    mov dx, 0x1f2
+    mov al, 1
+    out dx, al
+
+
+
+  ;; STEP 3: Set LBA = 0x81 (129)
+    inc dx                     ; dx = 0x1F3
+    mov al, 0x81
+    out dx, al
+
+    inc dx                     ; dx = 0x1F4
+    xor al, al
+    out dx, al
+
+    inc dx                     ; dx = 0x1F5
+    xor al, al
+    out dx, al
+
+    inc dx                     ; dx = 0x1F6
+    mov al, 0xE0               ; LBA mode, master, upper nibble
+    out dx, al
+
+    ;; STEP 4: Issue READ SECTOR command
+    mov dx, 0x1F7
+    mov al, 0x20               ; READ SECTOR
+    out dx, al
+
+    ;; STEP 5: Wait for DRQ
+.wait_drq:
+    in al, dx
+    test al, 0x08              ; DRQ bit
+    jz .wait_drq
+
+    ;; STEP 6: Read 256 words (512 bytes)
+    mov dx, 0x1F0
+    mov cx, 256
+.read_loop:
+    in ax, dx
+    stosw                     ; write word from AX to [ESI], advance ESI
+    loop .read_loop
+
+    pop ecx
+    pop edx
+    pop esi
+    pop eax
     ret
