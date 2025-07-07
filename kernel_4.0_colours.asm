@@ -36,7 +36,6 @@ check_print_colour_keywords:
     cmp eax, 1
     jne .not_printall_colours_keyword
     call printall_colours
-    call new_line
    
     jmp .return
 

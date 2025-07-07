@@ -509,6 +509,7 @@ main:
 %include "kernel_4.0_printhexbyte.asm"
 %include "kernel_4.0_stringtohex.asm"
 %include "kernel_4.0_colours.asm"
+%include "kernel_4.0_disksaves.asm"
 
 
 

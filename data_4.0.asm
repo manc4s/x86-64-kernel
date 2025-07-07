@@ -17,6 +17,45 @@ bg_color: db 0x67  ;0xd5 olive green ;
 text_revert: db 0x00
 text_color: db 0x00  ;0f white
 
+padding_between_data_blocks3: times 1000 db 0
+
+
+;;the 512 byte sectore 129 is going to contains colour changes for bg colour and text_colour
+;;if bg or text is changed from the default it will be updated inside of here
+;;
+;;
+;;  db 'b' for bg followed by db hex value to change to
+;;  db 't' for text followed by db hex value to change to
+;;
+;; when a change is made, look thruogh LBA129 and look for 'b' or 't' depending
+;;on which is being changed, if not found, write a dword with the ascii and data
+;; if it exists already, just write the byte of data with the ascii related
+LBA129_savedata:
+    times 512 db 0
+
+
+
+
+padding_between_data_blocks4: times 1000 db 0
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 cursor_bg: db 0x0f
@@ -240,7 +279,7 @@ page_data_end:
 
 
 
-padding_between_data_blocks: times 4096 db 0
+padding_between_data_blocks: times 1000 db 0
 
 
 
@@ -257,7 +296,7 @@ saved_state: times 7 dd 0
 
 
 
-padding_between_data_blocks3: times 4096 db 0
+padding_between_data_blocks2: times 1000 db 0
 
 
 
