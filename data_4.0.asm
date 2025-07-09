@@ -31,7 +31,7 @@ padding_between_data_blocks3: times 1000 db 0
 ;;on which is being changed, if not found, write a dword with the ascii and data
 ;; if it exists already, just write the byte of data with the ascii related
 LBA129_savedata:
-    times 512 db 0
+    times 512 db 0xFF
 
 
 
@@ -48,7 +48,14 @@ padding_between_data_blocks4: times 1000 db 0
 
 
 
-
+got_to_here1: db "got to here 1", 0
+got_to_here2: db "got to here 2", 0
+got_to_here3: db "got to here 3", 0
+got_to_here4: db "got to here 4", 0
+got_to_here5: db "got to here 5", 0
+got_to_here6: db "got to here 6", 0
+got_to_here7: db "got to here 7", 0
+got_toerror: db "errorrrererere", 0
 
 
 

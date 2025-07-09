@@ -142,8 +142,8 @@ main:
     xor bx, bx
     mov ah, 0x02
     mov al, 128
-    mov ch, 0
-    mov cl, 2
+    mov ch, 0   ;0
+    mov cl, 2   ;2
     mov dh, 0
     mov dl, [BOOT_DRIVE]
     int 0x13
@@ -166,7 +166,7 @@ main:
 
 
     jmp 0x08:start_protected_mode ; selector (index 1 * 8), offset 0
- 
+  
 
 
 
@@ -186,8 +186,8 @@ end:
 
 disk_fail_msg: db "DISK READ ERROR", 0
 
-BOOT_DRIVE: db 0
-
+;BOOT_DRIVE: db 0     ;floppy
+BOOT_DRIVE: db 0x80    ;hdd disk
 
 message:
     db "Booting...", 0 
@@ -331,7 +331,6 @@ start_protected_mode:
 
 
     jmp 0x08:0x10000
-
 
 
 

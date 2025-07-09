@@ -41,6 +41,24 @@ protected_start:
     mov esi, entered
     call print_string
     call new_line
+
+
+
+    mov eax, 0
+    call LBA129_coloursaves
+    
+
+
+
+    call printall_save
+    push esi
+    mov esi, got_to_here1
+    call print_string
+    pop esi
+
+    
+
+
     
     
     

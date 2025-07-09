@@ -18,104 +18,173 @@
 ;;saves the LBA129_savedata to sectore 129 (512 bytes) containing the changes 
 ;;
 
-LBA129_write_coloursaves:
+
+
+LBA129_coloursaves:
+    push edi
     push eax
     push esi
     push edx
     push ecx
+    push es
 
-    mov esi, LBA129_savedata      ;the 512 data relating to colour to save
+    ; --- ATA software reset ---
+    mov dx, 0x3F6       ; DCR / alt-status port
+    mov al, 0x04        ; set SRST (Software Reset) bit
+    out dx, al
+
+    xor al, al
+    out dx, al          ; clear SRST
+
+    
+
+; --- Wait for BSY=0 + RDY=1 ---
+.ready_wait:
+
+    ; --- 400ns delay ---
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+    test al, 0x80    ; BSY
+    jnz .ready_wait
+    test al, 0x40    ; RDY
+    jz .ready_wait
 
 
-    mov dx, 0x1f7
-    ;;STEP 1 for ATA
-.waitforBUSYbit:
-    in al, dx       ;;Status byte
-    test al, 0x80       ;;check the 7th bit if its 1 or zero goes into z register flag 0x80 - 10000000b
 
-    jnz .waitforBUSYbit  ;BSY 0 or 1. if zero not busy
-
-    ;;BSY is 0
+    mov edi, LBA129_savedata
 
 
-
-    ;;STEP 2 for ATA
-    ;;amount of sectors X passed to al
+    ; --- Setup ports and issue command ---
     mov dx, 0x1F2
-    mov al, 1         ;x sectors
-    out dx, al        ;output number of sectors to port
+    mov al, 1            ; sector count = 1
+    out dx, al
 
-
-
-
-
-    ;;STEP 3 for ATA
-    ;;set up LBA 129, 129 decimal is 0x81 hex
-    ;;LBA addresses are 28 bits
-    ;; LBA mode E highest nibble for LBA mode, last 4 bits
-    ;;controlled by ports 0x1f3 - 0x1f6
-
-    inc dx      ;;dx = 0x1f3
+    mov dx, 0x1F3
     mov al, 0x81
     out dx, al
 
-
-    inc dx      ;;0x1f4
-    mov al, 0x00
+    mov dx, 0x1F4
+    mov al, 0 ; LBA mid
     out dx, al
 
-
-    inc dx      ;;0x1f5
-    mov al, 0x00
+    mov dx, 0x1F5
+    mov al, 0
     out dx, al
 
-    inc dx      ;;0x1f6
-    mov al, 0xE0     ;;e is the byte for LBA mode, not included in 28 bit address
+    mov dx, 0x1F6
+    mov al, 0xE0         ; master | LBA mode | high nibble 0000
     out dx, al
 
-
-
-
-    ;;STEP 4 ISSUE COMMAND READ OR WRITE
-
-    mov dx, 0x1f7
-    mov al, 0x30   ;;write
+    mov dx, 0x1F7
+    mov al, 0x20         ; READ SECTOR
     out dx, al
 
 
 
-    ;;STEP 5 DATA REQUEST BIT
-.waitforDRQbit:
-    ;;wait for the data request bit to be 1 to continue
+
+    ;push esi
+    ;mov esi, got_to_here1    ;;got to read_sector
+    ;call print_string
+    ;pop esi
+    ;call new_line
+
+
+
+    ; --- 400ns delay ---
     in al, dx
-    test al, 0x08     ;;00001000 - 0x08 3rd bit is DRQ bit
-    jz .waitforDRQbit
+    in al, dx
+    in al, dx
+    in al, dx
 
 
-    ;;DRQ bit is 1
+.wait_ready:
+    in al, dx
+    test al, 0x01        ; ERR
+    jnz .read_fail
+    test al, 0x20        ; DF
+    jnz .read_fail
+    test al, 0x80        ; BSY
+    jnz .delay_and_retry
+    test al, 0x08        ; DRQ
+    jz .delay_and_retry
+    jmp .ready
+
+.delay_and_retry:
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+
+    
+    ;push esi
+    ;mov esi, got_to_here3
+    ;call print_string
+    ;pop esi
+    ;call new_line
+    jmp .wait_ready
+
+.ready:
 
 
 
 
-    ;;STEP 6 LOOP through BYTES AND WRITE
-    ;;expects the amount fo bytes defined above to write.
-
-    ;;0x1f0 takes words of data
-
-    mov dx, 0x1f0
-    mov cx, 256      ;256 loops, 2 bytes at a time being passed
-                    ;;256 * 2 = 512
-.write_loop:
-    lodsw           ;;moves word from [esi] into ax, increments esi by word
-    out dx, ax
-    loop .write_loop
+    
+    ;push esi
+    ;mov esi, got_to_here2
+    ;call print_string
+    ;pop esi
+    ;call new_line
 
 
+    mov ax, 0x10
+    mov es, ax
+
+    ; --- Read 512 bytes to ES:EDI ---
+    mov dx, 0x1F0
+    mov cx, 256
+    rep insw
+
+
+
+    mov ax, 0x20
+    mov es, ax
+    ;push esi    
+    ;mov esi, got_to_here3
+    ;call print_string          ;; read correctly
+    ;pop esi
+    ;call new_line
+
+
+
+    pop es
     pop ecx
     pop edx
     pop esi
     pop eax
+    pop edi
+    ret
 
+
+.read_fail:
+
+    
+    push esi
+    mov esi, got_toerror
+    call print_string          ;; read correctly
+    pop esi
+    call new_line
+
+
+    
+    pop es
+    pop ecx
+    pop edx
+    pop esi
+    pop eax
+    pop edi
     ret
 
 
@@ -124,70 +193,26 @@ LBA129_write_coloursaves:
 
 
 
-
-
-
-LBA129_read_coloursaves:
+printall_save:
     push eax
     push esi
-    push edx
     push ecx
 
+
     mov esi, LBA129_savedata
-
-    ;;1 BSY bit
-    mov dx, 0x1f7
-.wait_busy:
-    in al, dx
-    test al, 0x80
-    jnz .wait_busy
-
-
-    ;; 2 NUMBER OF SECTORS
-    mov dx, 0x1f2
-    mov al, 1
-    out dx, al
+    mov ecx, 512
 
 
 
-  ;; STEP 3: Set LBA = 0x81 (129)
-    inc dx                     ; dx = 0x1F3
-    mov al, 0x81
-    out dx, al
+.printloop:
+    ;mov al, [esi]
+    call print_hex_as_decimal3
+    inc esi
+    loop .printloop
 
-    inc dx                     ; dx = 0x1F4
-    xor al, al
-    out dx, al
 
-    inc dx                     ; dx = 0x1F5
-    xor al, al
-    out dx, al
-
-    inc dx                     ; dx = 0x1F6
-    mov al, 0xE0               ; LBA mode, master, upper nibble
-    out dx, al
-
-    ;; STEP 4: Issue READ SECTOR command
-    mov dx, 0x1F7
-    mov al, 0x20               ; READ SECTOR
-    out dx, al
-
-    ;; STEP 5: Wait for DRQ
-.wait_drq:
-    in al, dx
-    test al, 0x08              ; DRQ bit
-    jz .wait_drq
-
-    ;; STEP 6: Read 256 words (512 bytes)
-    mov dx, 0x1F0
-    mov cx, 256
-.read_loop:
-    in ax, dx
-    stosw                     ; write word from AX to [ESI], advance ESI
-    loop .read_loop
 
     pop ecx
-    pop edx
     pop esi
     pop eax
     ret
