@@ -310,7 +310,7 @@ LBA129_write_coloursaves:
     mov cx, 256
 
     ;;DS:ESI
-    rep outsw
+    rep outsw  ;repeat cx times
 
 
 
@@ -406,3 +406,53 @@ printall_save:
     pop esi
     pop eax
     ret
+
+
+
+
+
+
+
+;;compare with whats in bl
+;; example 'b' or 't' for check bg or check text
+check_coloursave:
+
+    push eax
+    push esi
+    push ecx
+    push ebx
+    
+    mov byte [coloursave_found], 0
+    mov esi, LBA129_savedata
+    mov ecx, 512
+
+
+.printloop:
+    
+    ;;reading bytes from LBA129_savedata
+    mov al, [esi]
+    cmp al, bl
+    jne .notfound
+
+    mov byte [coloursave_found], 1
+
+    mov eax, [hex_created]
+    mov byte [esi + 1], al
+    jmp .return
+
+
+.notfound:
+
+    inc esi
+    loop .printloop
+    
+
+
+.return:
+    pop ebx
+    pop ecx
+    pop esi
+    pop eax
+
+    ret
+

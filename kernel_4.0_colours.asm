@@ -39,9 +39,9 @@ check_print_colour_keywords:
 
 
 
-    call write_0xff_tosave
-    call printall_save
-    call LBA129_write_coloursaves
+    ;call write_0xff_tosave
+    ;call printall_save
+    ;call LBA129_write_coloursaves
     
 
 
@@ -63,7 +63,8 @@ check_print_colour_keywords:
     ;; if equal to 255 or less, then change that to the bg_colour, bg_rever or text_colour text_revert
     
 
-    ;; CHECK PARSED INPUTS HERE
+    ;; CHECK PARSED INPUTS HERE;
+    ;;teting
     ;push esi
     ;mov esi, val_1_buffer
     ;call print_string
@@ -73,6 +74,10 @@ check_print_colour_keywords:
     ;call new_line
     ;pop esi
 
+
+    ;;
+    ;;Compare with keyword6 set_bg
+    ;;
 
     push esi
     push edi
@@ -105,8 +110,33 @@ check_print_colour_keywords:
 
     mov eax, [hex_created]
     ;;al now contains the valid hex_created byte
-
     call set_the_background
+
+
+    push ebx
+    mov bl, 'b'
+    call check_coloursave
+    pop ebx
+
+    cmp byte [coloursave_found], 0
+    jne .exists_already
+
+
+    push esi
+    push edi
+    mov esi, LBA129_savedata
+    mov edi, [save_data_index]
+    mov byte [esi + edi], 'b'
+    mov byte [esi + edi + 1], al 
+    add dword [save_data_index], 2
+    pop edi
+    pop esi 
+    
+    call printall_save
+
+.exists_already:
+
+    call LBA129_write_coloursaves
 
     mov eax, 1
     jmp .return
@@ -123,6 +153,11 @@ check_print_colour_keywords:
 
 .notkeyword6:
 
+
+
+    ;;
+    ;;keyword 7 comparison below set_text
+    ;;
 
     push esi
     push edi
