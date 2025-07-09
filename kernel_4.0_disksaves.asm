@@ -20,7 +20,7 @@
 
 
 
-LBA129_coloursaves:
+LBA129_read_coloursaves:
     push edi
     push eax
     push esi
@@ -53,8 +53,6 @@ LBA129_coloursaves:
     jz .ready_wait
 
 
-
-    mov edi, LBA129_savedata
 
 
     ; --- Setup ports and issue command ---
@@ -132,15 +130,16 @@ LBA129_coloursaves:
 
 
     
-    ;push esi
-    ;mov esi, got_to_here2
-    ;call print_string
-    ;pop esi
-    ;call new_line
+    push esi
+    mov esi, got_to_here2
+    call print_string
+    pop esi
+    call new_line
 
 
     mov ax, 0x10
     mov es, ax
+    mov edi, LBA129_savedata   ;in the case of print string when debugging this is needed cause in print_char edi is changed
 
     ; --- Read 512 bytes to ES:EDI ---
     mov dx, 0x1F0
@@ -190,6 +189,197 @@ LBA129_coloursaves:
 
 
 
+
+LBA129_write_coloursaves:
+    push edi
+    push eax
+    push esi
+    push edx
+    push ecx
+    push es
+
+    ; --- ATA software reset ---
+    mov dx, 0x3F6       ; DCR / alt-status port
+    mov al, 0x04        ; set SRST (Software Reset) bit
+    out dx, al
+
+    xor al, al
+    out dx, al          ; clear SRST
+
+    
+
+; --- Wait for BSY=0 + RDY=1 ---
+.ready_wait:
+
+    ; --- 400ns delay ---
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+    test al, 0x80    ; BSY
+    jnz .ready_wait
+    test al, 0x40    ; RDY
+    jz .ready_wait
+
+
+
+
+    ; --- Setup ports and issue command ---
+    mov dx, 0x1F2
+    mov al, 1            ; sector count = 1
+    out dx, al
+
+    mov dx, 0x1F3
+    mov al, 0x81
+    out dx, al
+
+    mov dx, 0x1F4
+    mov al, 0 ; LBA mid
+    out dx, al
+
+    mov dx, 0x1F5
+    mov al, 0
+    out dx, al
+
+    mov dx, 0x1F6
+    mov al, 0xE0         ; master | LBA mode | high nibble 0000
+    out dx, al
+
+    mov dx, 0x1F7
+    mov al, 0x30         ; write sector
+    out dx, al
+
+    ;push esi
+    ;mov esi, got_to_here1    ;;got to read_sector
+    ;call print_string
+    ;pop esi
+    ;call new_line
+
+    ; --- 400ns delay ---
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+
+
+.wait_ready:
+    in al, dx
+    test al, 0x01        ; ERR
+    jnz .read_fail
+    test al, 0x20        ; DF
+    jnz .read_fail
+    test al, 0x80        ; BSY
+    jnz .delay_and_retry
+    test al, 0x08        ; DRQ
+    jz .delay_and_retry
+    jmp .ready
+
+.delay_and_retry:
+    in al, dx
+    in al, dx
+    in al, dx
+    in al, dx
+
+    
+    ;push esi
+    ;mov esi, got_to_here3
+    ;call print_string
+    ;pop esi
+    ;call new_line
+    jmp .wait_ready
+
+.ready:
+
+
+
+
+    
+    push esi
+    mov esi, got_to_here2
+    call print_string
+    pop esi
+    call new_line
+
+
+
+    mov esi, LBA129_savedata 
+
+    ; --- Read 512 bytes to ES:EDI ---
+    mov dx, 0x1F0
+    mov cx, 256
+
+    ;;DS:ESI
+    rep outsw
+
+
+
+    push esi    
+    mov esi, got_to_here3
+    call print_string          ;; read correctly
+    pop esi
+    call new_line
+
+
+
+    pop es
+    pop ecx
+    pop edx
+    pop esi
+    pop eax
+    pop edi
+    ret
+
+
+.read_fail:
+
+    
+    push esi
+    mov esi, got_toerror
+    call print_string          ;; read correctly
+    pop esi
+    call new_line
+
+
+    
+    pop es
+    pop ecx
+    pop edx
+    pop esi
+    pop eax
+    pop edi
+    ret
+
+
+
+
+
+
+
+
+
+write_0xff_tosave:
+    push eax
+    push edi
+    push es
+
+    mov ax, 0x10
+    mov es, ax
+
+    mov al, 0xFF
+    mov edi, LBA129_savedata
+    mov ecx, 512
+
+.fill:
+    stosb
+    loop .fill
+
+
+
+    pop es
+    pop edi
+    pop eax
+    ret
 
 
 

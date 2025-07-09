@@ -44,9 +44,14 @@ protected_start:
 
 
 
-    mov eax, 0
-    call LBA129_coloursaves
     
+    call LBA129_read_coloursaves
+  
+
+
+
+
+
 
 
 

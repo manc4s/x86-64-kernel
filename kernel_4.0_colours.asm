@@ -36,6 +36,15 @@ check_print_colour_keywords:
     cmp eax, 1
     jne .not_printall_colours_keyword
     call printall_colours
+
+
+
+    call write_0xff_tosave
+    call printall_save
+    call LBA129_write_coloursaves
+    
+
+
    
     jmp .return
 
