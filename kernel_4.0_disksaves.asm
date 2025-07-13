@@ -130,11 +130,11 @@ LBA129_read_coloursaves:
 
 
     
-    push esi
-    mov esi, got_to_here2
-    call print_string
-    pop esi
-    call new_line
+    ;push esi
+    ;mov esi, got_to_here2
+    ;call print_string
+    ;pop esi
+    ;call new_line
 
 
     mov ax, 0x10
@@ -299,7 +299,7 @@ LBA129_write_coloursaves:
     mov esi, got_to_here2
     call print_string
     pop esi
-    call new_line
+    ;call new_line
 
 
 
@@ -357,7 +357,7 @@ LBA129_write_coloursaves:
 
 
 
-
+;;for testing
 write_0xff_tosave:
     push eax
     push edi
@@ -382,7 +382,7 @@ write_0xff_tosave:
     ret
 
 
-
+;;testing
 printall_save:
     push eax
     push esi
@@ -437,6 +437,17 @@ check_coloursave:
     mov byte [coloursave_found], 1
 
     mov eax, [hex_created]
+    cmp eax, 0;means its boot
+    jne .notinBooting
+    
+    mov al, [esi + 1]
+    mov byte [bg_revert], al
+    mov byte [bg_color], al
+    jmp .return
+
+
+
+.notinBooting:
     mov byte [esi + 1], al
     jmp .return
 

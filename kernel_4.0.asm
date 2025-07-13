@@ -33,6 +33,21 @@ protected_start:
     mov es, ax
     
 
+
+
+    ;;read disk sector 129 (512 bytes. contains colour data for bg and text)
+    
+    
+    call LBA129_read_coloursaves  
+    push ebx
+    mov bl, 'b'
+    call check_coloursave
+    pop ebx
+
+
+
+
+    ;clear screen and ascii data
     call clear_screen
     call clear_page_data
     
@@ -41,15 +56,6 @@ protected_start:
     mov esi, entered
     call print_string
     call new_line
-
-
-
-    
-    call LBA129_read_coloursaves
-  
-
-
-
 
 
 

@@ -32,10 +32,6 @@ padding_between_data_blocks3: times 1000 db 0
 ;; if it exists already, just write the byte of data with the ascii related
 LBA129_savedata:
     times 512 db 0xFF
-
-save_data_index:   ;where into the data are you saved up to/using example 'b' '0x04' would be 2 bytes, increment 2
-    dd 0
-
 coloursave_found:
     db 0
 
