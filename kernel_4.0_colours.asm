@@ -119,22 +119,23 @@ check_print_colour_keywords:
     pop ebx
 
     cmp byte [coloursave_found], 0
-    jne .exists_already
+    jne .bg_exists_already
 
 
     push esi
     push edi
     mov esi, LBA129_savedata
-    mov edi, [save_data_index]
+    mov edi, [LBA129_savedata]
+    add esi, 4   ;dword containing the index
     mov byte [esi + edi], 'b'
     mov byte [esi + edi + 1], al 
-    add dword [save_data_index], 2
+    add dword [LBA129_savedata], 2
     pop edi
     pop esi 
     
     call printall_save
 
-.exists_already:
+.bg_exists_already:
 
     call LBA129_write_coloursaves
 
@@ -193,6 +194,39 @@ check_print_colour_keywords:
     ;;al now contains the valid hex_created byte
 
     call set_the_text
+
+
+
+
+    
+    push ebx
+    mov bl, 't'
+    call check_coloursave
+    pop ebx
+
+    cmp byte [coloursave_found], 0
+    jne .text_exists_already
+
+
+    push esi
+    push edi
+    mov esi, LBA129_savedata
+    mov edi, [LBA129_savedata]
+    add esi, 4    ;for a dword
+    mov byte [esi + edi], 't'
+    mov byte [esi + edi + 1], al 
+    add dword [LBA129_savedata], 2
+    pop edi
+    pop esi 
+    
+    call printall_save
+
+.text_exists_already:
+
+    call LBA129_write_coloursaves
+
+
+
 
     mov eax, 1
     jmp .return
